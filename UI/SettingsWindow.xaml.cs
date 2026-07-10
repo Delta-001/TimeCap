@@ -186,8 +186,8 @@ public partial class SettingsWindow : Window
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!TryParseInt(FpsBox.Text, 1, 240, "FPS", out int fps)) return;
-        if (!TryParseInt(CqBox.Text, 0, 51, "CQ", out int cq)) return;
-        if (!TryParseInt(BufferMinutesBox.Text, 1, 720, "Fenêtre max (minutes)", out int minutes)) return;
+        if (!TryParseInt(CqBox.Text, 0, 51, "Qualité", out int cq)) return;
+        if (!TryParseInt(BufferMinutesBox.Text, 1, 720, "Historique maximum (minutes)", out int minutes)) return;
         var outDir = OutDirBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(outDir))
         {

@@ -53,7 +53,7 @@
                     SelectedIndex="0" SelectionChanged="DurationUnit_Changed">
             <ComboBoxItem Content="secondes"/>
             <ComboBoxItem Content="minutes"/>
-            <ComboBoxItem Content="buffer complet"/>
+            <ComboBoxItem Content="tout l'historique"/>
           </ComboBox>
           <Button x:Name="AddOrUpdateButton" Content="Ajouter" Padding="12,3" Margin="10,0,0,0"
                   Click="AddOrUpdate_Click"/>
@@ -83,12 +83,12 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="FPS :" VerticalAlignment="Center"/>
         <TextBox x:Name="FpsBox" Grid.Row="0" Grid.Column="1" Margin="8,3"/>
-        <TextBlock Grid.Row="0" Grid.Column="2" Text="Qualité CQ (plus bas = mieux) :"
+        <TextBlock Grid.Row="0" Grid.Column="2" Text="Qualité (plus bas = meilleure) :"
                    VerticalAlignment="Center" Margin="16,0,0,0"/>
         <TextBox x:Name="CqBox" Grid.Row="0" Grid.Column="3" Margin="8,3" Width="130"
                  HorizontalAlignment="Left"/>
 
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Fenêtre max du buffer (min) :"
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Historique maximum (minutes) :"
                    VerticalAlignment="Center"/>
         <TextBox x:Name="BufferMinutesBox" Grid.Row="1" Grid.Column="1" Margin="8,3"/>
 

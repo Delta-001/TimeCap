@@ -60,7 +60,7 @@ public class HotkeyBinding
 
     public string DescribeDuration()
     {
-        if (DurationSeconds.IsFull) return "Buffer complet";
+        if (DurationSeconds.IsFull) return "Tout l'historique";
         var s = DurationSeconds.Seconds;
         return s >= 60 && s % 60 == 0 ? $"{s / 60} min" : $"{s} s";
     }

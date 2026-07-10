@@ -65,16 +65,18 @@ public sealed class CaptureEngine : IDisposable
             var cfg = _cfg();
             FfmpegPath ??= FfmpegLocator.Find(cfg.FfmpegPath)
                 ?? throw new InvalidOperationException(
-                    "ffmpeg.exe introuvable. Placez-le à côté de l'application ou dans le PATH " +
-                    "(ou renseignez ffmpeg_path dans config.json).");
+                    "FFmpeg est introuvable. Téléchargez la version « full » sur gyan.dev " +
+                    "et placez ffmpeg.exe à côté de l'application.");
 
             var caps = FfmpegCapabilities.Probe(FfmpegPath);
             if (!caps.HasDdagrab)
                 throw new InvalidOperationException(
-                    "Ce build ffmpeg ne supporte pas le filtre ddagrab (requis, dispo depuis ffmpeg 6.0).");
+                    "Votre version de FFmpeg ne permet pas la capture d'écran. " +
+                    "Téléchargez un build « full » récent sur gyan.dev.");
             VideoEncoder = caps.BestNvencEncoder
                 ?? throw new InvalidOperationException(
-                    "Aucun encodeur NVENC utilisable (av1_nvenc / hevc_nvenc). GPU NVIDIA requis.");
+                    "Aucune carte graphique NVIDIA compatible n'a été détectée — " +
+                    "elle est nécessaire pour l'enregistrement.");
 
             var bufferDir = ResolveBufferDir(cfg);
             Directory.CreateDirectory(bufferDir);
@@ -88,7 +90,7 @@ public sealed class CaptureEngine : IDisposable
                 catch (Exception ex)
                 {
                     Log.Warn("Audio indisponible : " + ex.Message);
-                    StatusChanged?.Invoke("Audio indisponible — capture vidéo seule");
+                    StatusChanged?.Invoke("Son du PC indisponible — enregistrement vidéo uniquement");
                 }
             }
 
@@ -135,15 +137,17 @@ public sealed class CaptureEngine : IDisposable
                     StopProcess(graceful: false);
                     lock (_lock) { _audio?.Dispose(); _audio = null; }
                     try { Start(); }
-                    catch (Exception ex2) { Error?.Invoke("Capture impossible", ex2.Message); }
+                    catch (Exception ex2) { Error?.Invoke("Enregistrement impossible", ex2.Message); }
                 });
                 return;
             }
 
             _cleanupTimer.Start();
-            var desc = VideoEncoder == "av1_nvenc" ? "AV1" : "HEVC";
-            if (_audio?.Loopback != null) desc += _audio.Mic != null ? " + audio + micro" : " + audio";
-            StatusChanged?.Invoke($"Capture active ({desc})");
+            // Détail technique (encodeur) réservé au log ; statut grand public.
+            var desc = _audio?.Loopback != null
+                ? (_audio.Mic != null ? "vidéo + son + micro" : "vidéo + son")
+                : "vidéo seule";
+            StatusChanged?.Invoke($"Enregistrement en cours ({desc})");
         }
     }
 
@@ -163,7 +167,7 @@ public sealed class CaptureEngine : IDisposable
             _audio?.Dispose();
             _audio = null;
         }
-        StatusChanged?.Invoke("Capture arrêtée");
+        StatusChanged?.Invoke("Enregistrement arrêté");
     }
 
     private void StopProcess(bool graceful)
@@ -218,16 +222,16 @@ public sealed class CaptureEngine : IDisposable
 
         if (restart)
         {
-            StatusChanged?.Invoke("Capture interrompue — redémarrage…");
+            StatusChanged?.Invoke("Enregistrement interrompu — reprise automatique…");
             Thread.Sleep(1_000);
             try { Start(); }
-            catch (Exception ex) { Error?.Invoke("Redémarrage de la capture impossible", ex.Message); }
+            catch (Exception ex) { Error?.Invoke("Reprise de l'enregistrement impossible", ex.Message); }
         }
         else
         {
-            StatusChanged?.Invoke("Capture arrêtée (crashs répétés)");
-            Error?.Invoke("Capture arrêtée",
-                "ffmpeg a crashé plusieurs fois d'affilée. Dernières erreurs :\n" + tail);
+            StatusChanged?.Invoke("Enregistrement arrêté (échecs répétés)");
+            Error?.Invoke("Enregistrement arrêté",
+                "Le moteur vidéo s'est arrêté plusieurs fois d'affilée. Détails :\n" + tail);
         }
     }
 

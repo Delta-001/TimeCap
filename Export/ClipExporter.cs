@@ -30,7 +30,7 @@ public sealed class ClipExporter
     public async Task<ExportResult> ExportAsync(ClipDuration duration)
     {
         if (!await _gate.WaitAsync(0))
-            return ExportResult.Fail("Un export est déjà en cours — réessayez dans un instant.");
+            return ExportResult.Fail("Une sauvegarde est déjà en cours — réessayez dans un instant.");
         try
         {
             return await Task.Run(() => DoExport(duration));
@@ -43,12 +43,12 @@ public sealed class ClipExporter
         var cfg = _cfg();
         var ffmpeg = _capture.FfmpegPath ?? FfmpegLocator.Find(cfg.FfmpegPath);
         if (ffmpeg is null)
-            return ExportResult.Fail("ffmpeg introuvable.");
+            return ExportResult.Fail("FFmpeg est introuvable — impossible d'assembler le clip.");
 
         int segLen = Math.Max(1, cfg.SegmentLengthS);
         var segments = _capture.GetCompletedSegments();
         if (segments.Count == 0)
-            return ExportResult.Fail("Buffer vide — attendez quelques secondes après le démarrage de la capture.");
+            return ExportResult.Fail("Rien à sauvegarder pour l'instant — laissez l'enregistrement tourner quelques secondes.");
 
         int count = duration.IsFull
             ? segments.Count
@@ -74,7 +74,7 @@ public sealed class ClipExporter
                 return ExportResult.Ok(outPath, count * segLen);
             }
             var tail = stderr.Length > 400 ? stderr[^400..] : stderr;
-            return ExportResult.Fail("La concaténation ffmpeg a échoué : " + tail.Trim());
+            return ExportResult.Fail("L'assemblage du clip a échoué : " + tail.Trim());
         }
         finally
         {

@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using ScreenClipTool.Capture;
 using ScreenClipTool.Config;
@@ -14,12 +15,24 @@ namespace ScreenClipTool.UI;
 
 public partial class MainWindow : Window
 {
-    private sealed class ClipRow
+    private sealed class ClipRow : INotifyPropertyChanged
     {
         public string Name { get; init; } = "";
-        public string SizeText { get; init; } = "";
-        public string DateText { get; init; } = "";
+        public string Meta { get; init; } = "";
         public string FullPath { get; init; } = "";
+
+        private ImageSource? _thumbnail;
+        public ImageSource? Thumbnail
+        {
+            get => _thumbnail;
+            set
+            {
+                _thumbnail = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Thumbnail)));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     private readonly CaptureEngine _capture;
@@ -30,6 +43,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _timer;
     private FileSystemWatcher? _clipsWatcher;
     private string? _watchedDir;
+    private CancellationTokenSource? _thumbCts;
 
     public MainWindow(CaptureEngine capture, Func<AppConfig> config,
                       Func<HotkeyBinding, Task> saveClip, Action openSettings, Action openClipsFolder)
@@ -71,9 +85,9 @@ public partial class MainWindow : Window
     public void SetStatus(string status)
     {
         StatusText.Text = status;
-        bool active = status.StartsWith("Capture active", StringComparison.OrdinalIgnoreCase);
-        bool warning = status.Contains("redémarrage", StringComparison.OrdinalIgnoreCase)
-                       || status.Contains("interrompue", StringComparison.OrdinalIgnoreCase);
+        bool active = status.StartsWith("Enregistrement en cours", StringComparison.OrdinalIgnoreCase);
+        bool warning = status.Contains("interrompu", StringComparison.OrdinalIgnoreCase)
+                       || status.Contains("reprise", StringComparison.OrdinalIgnoreCase);
         SetDot(active, warning);
     }
 
@@ -127,7 +141,7 @@ public partial class MainWindow : Window
             SaveButtons.Children.Add(btn);
         }
 
-        GranularityHint.Text = $"granularité : segments de {cfg.SegmentLengthS} s";
+        GranularityHint.Text = $"précision : {cfg.SegmentLengthS} s";
         SetupClipsWatcher(cfg.OutputDir);
         LoadClips();
         UpdateBuffer();
@@ -191,16 +205,55 @@ public partial class MainWindow : Window
                     .Select(f => new ClipRow
                     {
                         Name = f.Name,
-                        SizeText = FormatSize(f.Length),
-                        DateText = f.LastWriteTime.ToString("dd/MM/yyyy HH:mm:ss"),
+                        Meta = $"{FormatSize(f.Length)} · {f.LastWriteTime:dd/MM/yyyy HH:mm}",
                         FullPath = f.FullName,
                     })
                     .ToList();
             }
             ClipsList.ItemsSource = items;
             ClipsEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            _thumbCts?.Cancel();
+            _thumbCts = new CancellationTokenSource();
+            _ = LoadThumbnailsAsync(items, _thumbCts.Token);
         }
         catch (Exception ex) { Log.Warn("Liste des clips : " + ex.Message); }
+    }
+
+    /// <summary>Génère/charge les miniatures en arrière-plan, du plus récent au plus ancien.</summary>
+    private async Task LoadThumbnailsAsync(List<ClipRow> rows, CancellationToken ct)
+    {
+        var ffmpeg = _capture.FfmpegPath ?? FfmpegLocator.Find(_cfg().FfmpegPath);
+        if (ffmpeg is null) return;
+        foreach (var row in rows)
+        {
+            if (ct.IsCancellationRequested) return;
+            var image = await Task.Run(() =>
+            {
+                var thumb = ClipThumbnails.GetOrCreate(ffmpeg, row.FullPath);
+                return thumb is null ? null : LoadBitmap(thumb);
+            }, ct).ConfigureAwait(false);
+            if (ct.IsCancellationRequested) return;
+            if (image != null)
+                await Dispatcher.BeginInvoke(() => row.Thumbnail = image);
+        }
+    }
+
+    /// <summary>Bitmap figé (Freeze) : chargeable hors thread UI, fichier non verrouillé.</summary>
+    private static ImageSource? LoadBitmap(string path)
+    {
+        try
+        {
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.UriSource = new Uri(path);
+            bmp.DecodePixelWidth = 336;
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch { return null; }
     }
 
     private ClipRow? SelectedClip => ClipsList.SelectedItem as ClipRow;

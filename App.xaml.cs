@@ -135,7 +135,7 @@ public partial class App : Application
             _config = _configService.Load();
             _capture = new CaptureEngine(() => _config);
             var main = new MainWindow(_capture, () => _config, _ => Task.CompletedTask, () => { }, () => { });
-            main.SetStatus("Capture active (test UI)");
+            main.SetStatus("Enregistrement en cours (test)");
             main.Show();
             var settings = new SettingsWindow(_configService);
             settings.Show();
@@ -167,8 +167,8 @@ public partial class App : Application
             Log.Error("Démarrage capture : " + ex);
             Dispatcher.BeginInvoke(() =>
             {
-                _tray?.SetStatus("Capture inactive");
-                _tray?.NotifyError("Impossible de démarrer la capture", ex.Message);
+                _tray?.SetStatus("Enregistrement inactif");
+                _tray?.NotifyError("Impossible de démarrer l'enregistrement", ex.Message);
             });
         }
     });
@@ -189,7 +189,7 @@ public partial class App : Application
         if (result.Success)
             _tray?.Notify("Clip sauvegardé", $"{Path.GetFileName(result.Path)} (≈{result.Seconds} s)");
         else
-            _tray?.NotifyError("Export impossible", result.Message);
+            _tray?.NotifyError("Sauvegarde impossible", result.Message);
     }
 
     private void OpenSettings()
@@ -225,7 +225,7 @@ public partial class App : Application
                 {
                     Log.Error("Redémarrage capture : " + ex);
                     Dispatcher.BeginInvoke(() =>
-                        _tray?.NotifyError("Redémarrage de la capture impossible", ex.Message));
+                        _tray?.NotifyError("Reprise de l'enregistrement impossible", ex.Message));
                 }
             });
         }
@@ -235,8 +235,11 @@ public partial class App : Application
     {
         try
         {
-            Directory.CreateDirectory(_config.OutputDir);
-            System.Diagnostics.Process.Start("explorer.exe", _config.OutputDir);
+            // Path.GetFullPath normalise les "/" de config.json en "\" :
+            // explorer.exe ne comprend pas "C:/Clips" et ouvrirait Documents.
+            var dir = Path.GetFullPath(_config.OutputDir);
+            Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start("explorer.exe", $"\"{dir}\"");
         }
         catch (Exception ex) { _tray?.NotifyError("Dossier des clips", ex.Message); }
     }

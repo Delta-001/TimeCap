@@ -116,7 +116,7 @@ public sealed class AudioCaptureService : IDisposable
             catch (Exception ex)
             {
                 Log.Warn("Micro indisponible : " + ex.Message);
-                status?.Invoke("Micro indisponible — piste micro ignorée");
+                status?.Invoke("Micro indisponible — ignoré");
             }
         }
 
