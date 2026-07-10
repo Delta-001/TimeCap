@@ -4,7 +4,7 @@ namespace ScreenClipTool.Capture;
 
 public static class FfmpegLocator
 {
-    /// <summary>Cherche ffmpeg.exe : chemin configuré → dossier de l'app → PATH.</summary>
+    /// <summary>Cherche ffmpeg.exe : chemin configuré → dossier de l'app → PATH → installation gérée.</summary>
     public static string? Find(string? configuredPath)
     {
         if (!string.IsNullOrWhiteSpace(configuredPath) && File.Exists(configuredPath))
@@ -29,7 +29,9 @@ public static class FfmpegLocator
             }
             catch { /* entrée PATH invalide */ }
         }
-        return null;
+
+        // Installation gérée (téléchargée automatiquement au premier lancement)
+        return FfmpegInstaller.FindInstalled();
     }
 
     /// <summary>ffprobe.exe attendu à côté de ffmpeg.exe, ou null.</summary>

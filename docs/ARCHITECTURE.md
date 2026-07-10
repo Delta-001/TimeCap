@@ -13,7 +13,7 @@ d'une durée variable (raccourci clavier → durée), sans réencodage.
 ## Auto-tests
 
 ```powershell
-ScreenClipTool.exe --selftest resultat.json
+TimeCap.exe --selftest resultat.json
 ```
 
 Capture ~9 s (vidéo + audio), exporte un clip de 5 s, vérifie taille/durée/flux via
@@ -35,7 +35,7 @@ réenregistrement dynamique des hotkeys (unregister/register), sans redémarrage
 | `max_buffer_minutes` | Fenêtre max du buffer : les segments plus vieux sont supprimés (borne le disque) |
 | `output_idx` | Index du moniteur capturé (ddagrab) |
 | `buffer_dir` | Dossier des segments (défaut : `%TEMP%\ScreenClipTool\buffer`) |
-| `ffmpeg_path` | Chemin explicite de ffmpeg.exe (défaut : dossier de l'app, puis PATH) |
+| `ffmpeg_path` | Chemin explicite de ffmpeg.exe (défaut : dossier de l'app → PATH → installation gérée) |
 | `duration_seconds` | Nombre de secondes, ou `"full"` = tout le buffer |
 | `resolution` | Informatif : ddagrab capture toujours la résolution native de l'écran |
 
@@ -80,5 +80,15 @@ Les hotkeys sont triés par durée croissante (`"full"` en dernier) au chargemen
 - Léger décalage A/V possible (~100 ms) au démarrage d'une session : les timestamps
   audio démarrent à la connexion du pipe. Négligeable en pratique, à resynchroniser via
   `-use_wallclock_as_timestamps` si besoin.
-- Le bundling de ffmpeg dans l'installeur n'est pas automatisé : déposer `ffmpeg.exe`
-  (+ `ffprobe.exe`) à côté de `ScreenClipTool.exe` suffit.
+
+## Installation automatique de ffmpeg (plug-and-play)
+
+Au premier lancement, si aucun ffmpeg n'est trouvé (ni à côté de l'exe, ni dans le
+PATH), l'application télécharge le build « essentials » de gyan.dev (~30 Mo, inclut
+ddagrab + NVENC) — avec bascule automatique vers les builds officiels BtbN sur GitHub
+(~160 Mo, URL stable) si gyan.dev est inaccessible — puis extrait
+`ffmpeg.exe` / `ffprobe.exe` vers `%LOCALAPPDATA%\TimeCap\ffmpeg`, vérifie que le
+binaire démarre, et lance la capture.
+La progression s'affiche dans la barre de statut de la fenêtre principale. Déposer
+manuellement `ffmpeg.exe` à côté de `TimeCap.exe` (ou dans le PATH) reste prioritaire
+sur l'installation gérée.

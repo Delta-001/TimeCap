@@ -159,15 +159,37 @@ public partial class App : Application
         }
     }
 
-    private void StartCaptureInBackground() => Task.Run(() =>
+    private void StartCaptureInBackground() => Task.Run(async () =>
     {
-        try { _capture!.Start(); }
+        try
+        {
+            // Plug-and-play : si ffmpeg est absent (ni à côté de l'exe, ni dans
+            // le PATH, ni déjà installé), on le télécharge au premier lancement.
+            if (Capture.FfmpegLocator.Find(_config.FfmpegPath) is null)
+            {
+                Log.Info("ffmpeg absent — installation automatique.");
+                await FfmpegInstaller.InstallAsync(new Progress<string>(s =>
+                    Dispatcher.BeginInvoke(() => SetStatus(s))));
+            }
+            _capture!.Start();
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            Log.Error("Téléchargement ffmpeg : " + ex);
+            _ = Dispatcher.BeginInvoke(() =>
+            {
+                SetStatus("Enregistrement inactif");
+                _tray?.NotifyError("Installation impossible",
+                    "Le téléchargement du moteur vidéo a échoué — une connexion internet " +
+                    "est nécessaire au premier lancement. Relancez l'application une fois connecté.");
+            });
+        }
         catch (Exception ex)
         {
             Log.Error("Démarrage capture : " + ex);
-            Dispatcher.BeginInvoke(() =>
+            _ = Dispatcher.BeginInvoke(() =>
             {
-                _tray?.SetStatus("Enregistrement inactif");
+                SetStatus("Enregistrement inactif");
                 _tray?.NotifyError("Impossible de démarrer l'enregistrement", ex.Message);
             });
         }

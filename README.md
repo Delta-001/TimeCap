@@ -3,73 +3,90 @@
 </p>
 
 <h1 align="center">TimeCap</h1>
-<p align="center"><em>Clip the moment</em> — Lightweight background replay buffer (Medal.tv / OBS style)</p>
+<p align="center"><em>Clip the moment</em> — instant replay for your screen (Medal.tv / OBS style)</p>
 
 ---
 
-TimeCap (`ScreenClipTool.exe` executable) is a lightweight Windows application that runs in the background (in your system tray). It records your screen **continuously** without impacting your performance. As soon as you hit a hotkey, it instantly saves a clip of the last elapsed seconds or minutes.
+TimeCap is a lightweight Windows application that records your screen **continuously** in the background, with no impact on your performance. Whenever something great happens, press a hotkey: the last seconds or minutes are instantly saved as a video clip — *after* the moment happened.
 
 ## ✨ Highlights
 
-* **Zero impact on your games**: Recording is handled 100% by your NVIDIA graphics card.
-* **Instant saving**: Clips are generated in a fraction of a second without slowing down your computer[cite: 3].
-* **Lightweight and portable**: No complex installation required; the application runs directly[cite: 3].
+* **Plug and play** — download one file and run it. Everything else installs itself.
+* **Zero impact on your games** — recording runs 100% on your NVIDIA graphics card.
+* **Instant saving** — clips are assembled in a fraction of a second, with no re-encoding.
+* **Light and portable** — a single executable. No installer, no .NET runtime, nothing to set up.
 
 ## 📥 Download
 
-The latest ready-to-use version is available in the **[Releases](../../releases)** section of the repository[cite: 3]: download `ScreenClipTool.exe` (a single, self-contained executable, no .NET runtime needed), place `ffmpeg.exe` and `ffprobe.exe` next to it (see prerequisites below), and run[cite: 3].
+1. Grab **`TimeCap.exe`** from the **[Releases](../../releases)** page.
+2. Run it. On first launch, TimeCap automatically downloads its video engine (FFmpeg, ~30 MB) — this is the only time an internet connection is required.
 
----
+That's it. No other steps.
 
-## 🚀 Quick Start Guide
+## 🖥️ Requirements
 
-### 1. Hardware and Software Prerequisites
-* **System**: Windows 10 or Windows 11[cite: 3].
-* **Graphics Card**: NVIDIA GeForce (RTX 40xx/50xx series recommended for the AV1 format, older cards are supported through automatic fallback to HEVC)[cite: 3].
-* **FFmpeg** (the video engine): 
-  1. Download a recent "full" build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)[cite: 3].
-  2. Extract the downloaded file and place **`ffmpeg.exe`** (and ideally `ffprobe.exe`) directly in the same folder as the `ScreenClipTool.exe` application[cite: 3].
+* **System**: Windows 10 or Windows 11.
+* **Graphics card**: NVIDIA GeForce (RTX 40/50 series recommended for AV1; older cards automatically fall back to HEVC).
+* **Internet**: only on first launch, for the automatic video engine download.
 
-### 2. Launching
-Double-click `ScreenClipTool.exe`[cite: 3]. 
-* A dark window opens showing a **REC** indicator (confirming the background recording is active) and the list of your recent clips[cite: 3].
-* If you close this window, the application remains active and minimizes to the notification area (next to the Windows system clock)[cite: 3]. Double-clicking the icon will reopen it[cite: 3].
+## 🚀 Getting started
 
----
+Double-click `TimeCap.exe`:
 
-## ⚙️ Configuration and Settings
+* A dark window opens with a **REC** indicator (recording is already running) and your recent clips shown as thumbnails.
+* Closing the window keeps TimeCap running in the notification area (next to the Windows clock). Double-click the tray icon to reopen it.
 
-You can configure everything directly from the application's graphical user interface (Settings button)[cite: 3]. Changes are applied instantly without needing to restart the program[cite: 3].
+Save a clip anytime with the default hotkeys:
 
-### Hotkeys
-You can configure multiple keys for different durations (the list is sorted from shortest to longest duration)[cite: 3]. For example:
-* `Alt + X` ➔ Save the last 15 seconds[cite: 3].
-* `Alt + C` ➔ Save the last 10 minutes[cite: 3].
-* `F11` ➔ Save the entire available memory buffer[cite: 3].
+| Hotkey | Saves |
+|---|---|
+| `Alt + X` | the last 15 seconds |
+| `Alt + C` | the last 10 minutes |
+| `F11` | the entire available history |
 
-> ⚠️ **Important Note**: If you choose a single key without a modifier (like `F11` without Alt or Ctrl), this key will be "blocked" by the application and your games will not receive it as long as ScreenClipTool is running[cite: 3]. Use combinations instead (e.g., `Alt + F11`)[cite: 3].
+> ⚠️ **Note**: a hotkey without a modifier (like `F11` alone) is captured globally — your games won't receive that key while TimeCap is running. Prefer combinations such as `Alt + F11`.
 
-### Main options in the `config.json` file
-For advanced users, a `config.json` file is automatically created next to the executable (or in your `%APPDATA%` folder)[cite: 3]. Here are the main options you can modify[cite: 3]:
+## ⚙️ Settings
+
+Everything is configurable from the app itself (Settings button), and changes apply immediately — no restart needed:
+
+* Hotkeys and their clip durations (the list is sorted from shortest to longest).
+* Framerate, quality, maximum history length, output folder.
+* Desktop audio and microphone (recorded on a separate track).
+
+### Advanced: the `config.json` file
+
+A `config.json` file is created automatically in `%APPDATA%\ScreenClipTool` (or next to the executable for portable use). Main options:
 
 | Parameter | Description |
 |---|---|
-| `output_dir` | The folder where your final clips will be saved (e.g., `"C:/Clips"`)[cite: 3]. |
-| `max_buffer_minutes` | The maximum duration of the continuous recording (e.g., `15`)[cite: 3]. Older videos are automatically deleted to prevent filling up your hard drive[cite: 3]. |
-| `fps` | Video framerate (`60` or `30`)[cite: 3]. |
-| `audio_enabled` | `true` (enabled) or `false` (disabled) to record your PC system sound[cite: 3]. |
-| `mic_enabled` | `true` or `false` to include your microphone on a separate audio track[cite: 3]. |
-| `output_idx` | If you have multiple displays, `0` stands for the main screen, `1` for the second, etc[cite: 3]. |
+| `output_dir` | Folder where your clips are saved (e.g. `"C:/Clips"`). |
+| `max_buffer_minutes` | Length of the rolling history (e.g. `15`). Older footage is deleted automatically so your disk never fills up. |
+| `fps` | Recording framerate (`60` or `30`). |
+| `audio_enabled` | `true` / `false` — record your PC sound. |
+| `mic_enabled` | `true` / `false` — record your microphone on a separate track. |
+| `output_idx` | Which display to record: `0` for the first screen, `1` for the second, etc. |
+| `ffmpeg_path` | Optional explicit path to `ffmpeg.exe`. By default TimeCap looks next to the executable, then in `PATH`, then in its own automatic install. |
 
----
+## 🛠️ For developers
 
-## 🛠️ For Developers (Compilation)
-
-If you prefer to compile the application yourself, the .NET 8 SDK is required[cite: 3]:
+Building from source requires the .NET 8 SDK:
 
 ```powershell
-# Compile in Release mode:
+# Build in Release mode:
 dotnet build -c Release
 
-# Create a single, self-contained executable (no need to install .NET on the target machine):
+# Create the single self-contained executable (no .NET needed on the target machine):
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+### Built-in diagnostics
+
+* `TimeCap.exe --selftest result.json` — records ~9 seconds for real, exports a 5-second clip and verifies it (size, duration, streams). Writes a JSON report.
+* `TimeCap.exe --uitest` — opens both windows without starting the recorder, to validate the UI.
+
+### Architecture
+
+The capture pipeline (ddagrab → NVENC → 2-second segments → stream-copy concat), the robustness behaviors (auto-restart, orphan-process protection, audio keepalive) and the known limitations are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (French).
+
+Releases are built automatically by GitHub Actions when a `v*` tag is pushed.

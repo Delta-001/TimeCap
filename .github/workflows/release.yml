@@ -28,7 +28,7 @@ jobs:
           -o out
 
       - name: Zip
-        run: Compress-Archive -Path out/ScreenClipTool.exe -DestinationPath TimeCap-win-x64.zip
+        run: Compress-Archive -Path out/TimeCap.exe -DestinationPath TimeCap-win-x64.zip
 
       - name: Release
         uses: softprops/action-gh-release@v2
