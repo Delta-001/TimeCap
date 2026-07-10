@@ -14,6 +14,10 @@ public static class ClipThumbnails
     private static readonly string CacheDir =
         Path.Combine(Path.GetTempPath(), "ScreenClipTool", "thumbs");
 
+    /// <summary>Largeur des vignettes générées ; fait partie de la clé de cache,
+    /// donc l'augmenter régénère automatiquement les anciennes miniatures.</summary>
+    private const int TargetWidth = 640;
+
     private static bool _pruned;
 
     /// <summary>Renvoie le chemin du jpg de la miniature, ou null si échec.</summary>
@@ -27,19 +31,19 @@ public static class ClipThumbnails
             PruneOnce();
 
             var key = Convert.ToHexString(MD5.HashData(
-                Encoding.UTF8.GetBytes($"{fi.FullName}|{fi.LastWriteTimeUtc.Ticks}|{fi.Length}")));
+                Encoding.UTF8.GetBytes($"{fi.FullName}|{fi.LastWriteTimeUtc.Ticks}|{fi.Length}|{TargetWidth}")));
             var thumb = Path.Combine(CacheDir, key + ".jpg");
             if (File.Exists(thumb)) return thumb;
 
             // Image à ~0,3 s (évite une éventuelle première frame noire),
             // nouvel essai à 0 s pour les clips très courts.
             var (code, _, _) = ProcessUtil.Run(ffmpegPath,
-                $"-hide_banner -v error -y -ss 0.3 -i \"{clipPath}\" -frames:v 1 -vf scale=320:-2 -q:v 5 \"{thumb}\"",
+                $"-hide_banner -v error -y -ss 0.3 -i \"{clipPath}\" -frames:v 1 -vf scale={TargetWidth}:-2 -q:v 4 \"{thumb}\"",
                 15_000);
             if (code != 0 || !File.Exists(thumb))
             {
                 (code, _, _) = ProcessUtil.Run(ffmpegPath,
-                    $"-hide_banner -v error -y -i \"{clipPath}\" -frames:v 1 -vf scale=320:-2 -q:v 5 \"{thumb}\"",
+                    $"-hide_banner -v error -y -i \"{clipPath}\" -frames:v 1 -vf scale={TargetWidth}:-2 -q:v 4 \"{thumb}\"",
                     15_000);
             }
             return code == 0 && File.Exists(thumb) ? thumb : null;

@@ -248,7 +248,7 @@ public partial class MainWindow : Window
             bmp.BeginInit();
             bmp.CacheOption = BitmapCacheOption.OnLoad;
             bmp.UriSource = new Uri(path);
-            bmp.DecodePixelWidth = 336;
+            bmp.DecodePixelWidth = 736;
             bmp.EndInit();
             bmp.Freeze();
             return bmp;
