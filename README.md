@@ -3,83 +3,73 @@
 </p>
 
 <h1 align="center">TimeCap</h1>
-<p align="center"><em>Clip the moment</em> — Enregistreur de clips en arrière-plan (style Medal.tv / OBS)</p>
+<p align="center"><em>Clip the moment</em> — Lightweight background replay buffer (Medal.tv / OBS style)</p>
 
 ---
 
-TimeCap (exécutable `ScreenClipTool.exe`) est une application Windows légère qui tourne en arrière-plan (dans votre barre des tâches). Elle enregistre votre écran **en continu** sans impacter vos performances. Dès que vous appuyez sur un raccourci clavier, elle sauvegarde instantanément un clip des dernières secondes ou minutes écoulées.
+TimeCap (`ScreenClipTool.exe` executable) is a lightweight Windows application that runs in the background (in your system tray). It records your screen **continuously** without impacting your performance. As soon as you hit a hotkey, it instantly saves a clip of the last elapsed seconds or minutes.
 
-## ✨ Points forts
+## ✨ Highlights
 
-* **Zéro impact sur vos jeux** : L'enregistrement est géré à 100 % par votre carte graphique NVIDIA.
-* **Sauvegarde instantanée** : Les clips sont générés en une fraction de seconde sans faire ramer l'ordinateur.
-* **Léger et portable** : Pas besoin d'installation complexe, l'application s'exécute directement.
+* **Zero impact on your games**: Recording is handled 100% by your NVIDIA graphics card.
+* **Instant saving**: Clips are generated in a fraction of a second without slowing down your computer[cite: 3].
+* **Lightweight and portable**: No complex installation required; the application runs directly[cite: 3].
 
-## 📥 Téléchargement
+## 📥 Download
 
-La dernière version prête à l'emploi est disponible dans la section **[Releases](../../releases)** du dépôt : téléchargez `ScreenClipTool.exe` (exécutable unique et autonome, aucun runtime .NET à installer), placez `ffmpeg.exe` et `ffprobe.exe` à côté (voir prérequis ci-dessous), puis lancez.
-
----
-
-## 🚀 Guide de démarrage rapide
-
-### 1. Prérequis matériel et logiciel
-* **Système** : Windows 10 ou Windows 11.
-* **Carte graphique** : NVIDIA GeForce (Série RTX 40xx/50xx recommandée pour le format AV1, cartes plus anciennes compatibles grâce à un basculement automatique en HEVC).
-* **FFmpeg** (le moteur vidéo) : 
-  1. Téléchargez la version « full » récente sur [gyan.dev](https://www.gyan.dev/ffmpeg/builds/).
-  2. Extrayez le fichier téléchargé et placez **`ffmpeg.exe`** (et idéalement `ffprobe.exe`) directement dans le même dossier que l'application `ScreenClipTool.exe`.
-
-### 2. Lancement
-Double-cliquez sur `ScreenClipTool.exe`. 
-* Une fenêtre sombre s'ouvre avec un indicateur **REC** (qui confirme que l'enregistrement en arrière-plan fonctionne) et la liste de vos clips récents.
-* Si vous fermez cette fenêtre, l'application reste active et se réduit dans la zone de notification (à côté de l'horloge Windows). Un double-clic sur l'icône permet de la rouvrir.
+The latest ready-to-use version is available in the **[Releases](../../releases)** section of the repository[cite: 3]: download `ScreenClipTool.exe` (a single, self-contained executable, no .NET runtime needed), place `ffmpeg.exe` and `ffprobe.exe` next to it (see prerequisites below), and run[cite: 3].
 
 ---
 
-## ⚙️ Configuration et Réglages
+## 🚀 Quick Start Guide
 
-Vous pouvez tout configurer directement depuis l'interface graphique de l'application (bouton Réglages). Les changements sont appliqués immédiatement sans avoir besoin de redémarrer le programme.
+### 1. Hardware and Software Prerequisites
+* **System**: Windows 10 or Windows 11[cite: 3].
+* **Graphics Card**: NVIDIA GeForce (RTX 40xx/50xx series recommended for the AV1 format, older cards are supported through automatic fallback to HEVC)[cite: 3].
+* **FFmpeg** (the video engine): 
+  1. Download a recent "full" build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)[cite: 3].
+  2. Extract the downloaded file and place **`ffmpeg.exe`** (and ideally `ffprobe.exe`) directly in the same folder as the `ScreenClipTool.exe` application[cite: 3].
 
-### Les raccourcis clavier (Hotkeys)
-Vous pouvez configurer plusieurs touches pour des durées différentes (la liste est triée de la durée la plus courte à la plus longue). Par exemple :
-* `Alt + X` ➔ Sauvegarder les 15 dernières secondes.
-* `Alt + C` ➔ Sauvegarder les 10 dernières minutes.
-* `F11` ➔ Sauvegarder la totalité de la mémoire tampon disponible.
+### 2. Launching
+Double-click `ScreenClipTool.exe`[cite: 3]. 
+* A dark window opens showing a **REC** indicator (confirming the background recording is active) and the list of your recent clips[cite: 3].
+* If you close this window, the application remains active and minimizes to the notification area (next to the Windows system clock)[cite: 3]. Double-clicking the icon will reopen it[cite: 3].
 
-> ⚠️ **Note importante** : Si vous choisissez une touche seule sans modificateur (comme `F11` sans Alt ou Ctrl), cette touche sera "bloquée" par l'application et vos jeux ne la recevront pas tant que ScreenClipTool est ouvert. Privilégiez des combinaisons (ex: `Alt + F11`).
+---
 
-### Options principales du fichier `config.json`
-Pour les utilisateurs avancés, un fichier `config.json` est créé automatiquement à côté de l'exécutable (ou dans votre dossier `%APPDATA%`). Voici les options principales que vous pouvez modifier :
+## ⚙️ Configuration and Settings
 
-| Paramètre | Description |
+You can configure everything directly from the application's graphical user interface (Settings button)[cite: 3]. Changes are applied instantly without needing to restart the program[cite: 3].
+
+### Hotkeys
+You can configure multiple keys for different durations (the list is sorted from shortest to longest duration)[cite: 3]. For example:
+* `Alt + X` ➔ Save the last 15 seconds[cite: 3].
+* `Alt + C` ➔ Save the last 10 minutes[cite: 3].
+* `F11` ➔ Save the entire available memory buffer[cite: 3].
+
+> ⚠️ **Important Note**: If you choose a single key without a modifier (like `F11` without Alt or Ctrl), this key will be "blocked" by the application and your games will not receive it as long as ScreenClipTool is running[cite: 3]. Use combinations instead (e.g., `Alt + F11`)[cite: 3].
+
+### Main options in the `config.json` file
+For advanced users, a `config.json` file is automatically created next to the executable (or in your `%APPDATA%` folder)[cite: 3]. Here are the main options you can modify[cite: 3]:
+
+| Parameter | Description |
 |---|---|
-| `output_dir` | Le dossier où seront enregistrés vos clips finaux (ex: `"C:/Clips"`). |
-| `max_buffer_minutes` | La durée maximale de l'enregistrement en continu (ex: `15`). Les vidéos plus vieilles sont automatiquement effacées pour ne pas saturer votre disque dur. |
-| `fps` | La fluidité de la vidéo (`60` ou `30`). |
-| `audio_enabled` | `true` (activé) ou `false` (désactivé) pour enregistrer le son de votre PC. |
-| `mic_enabled` | `true` ou `false` pour inclure votre microphone sur une piste audio séparée. |
-| `output_idx` | Si vous avez plusieurs écrans, `0` désigne le premier écran, `1` le second, etc. |
+| `output_dir` | The folder where your final clips will be saved (e.g., `"C:/Clips"`)[cite: 3]. |
+| `max_buffer_minutes` | The maximum duration of the continuous recording (e.g., `15`)[cite: 3]. Older videos are automatically deleted to prevent filling up your hard drive[cite: 3]. |
+| `fps` | Video framerate (`60` or `30`)[cite: 3]. |
+| `audio_enabled` | `true` (enabled) or `false` (disabled) to record your PC system sound[cite: 3]. |
+| `mic_enabled` | `true` or `false` to include your microphone on a separate audio track[cite: 3]. |
+| `output_idx` | If you have multiple displays, `0` stands for the main screen, `1` for the second, etc[cite: 3]. |
 
 ---
 
-## 🛠️ Pour les développeurs (Compilation)
+## 🛠️ For Developers (Compilation)
 
-Si vous préférez compiler l'application vous-même, le SDK .NET 8 est requis :
+If you prefer to compile the application yourself, the .NET 8 SDK is required[cite: 3]:
 
 ```powershell
-# Compiler en mode Release :
+# Compile in Release mode:
 dotnet build -c Release
 
-# Créer un exécutable unique et autonome (sans besoin d'installer .NET sur la machine cible) :
+# Create a single, self-contained executable (no need to install .NET on the target machine):
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
-### Outils de diagnostic intégrés
-Vous pouvez tester le bon fonctionnement de votre configuration vidéo/audio en ligne de commande :
-* `ScreenClipTool.exe --selftest resultat.json` : Lance un enregistrement test de 9 secondes et vérifie automatiquement si le fichier généré est valide.
-* `ScreenClipTool.exe --uitest` : Permet de tester et valider l'interface graphique sans démarrer le moteur d'enregistrement.
-
-### Architecture
-
-Le détail du pipeline (ddagrab → NVENC → segments → concat), les comportements de robustesse (restart auto, job object, keepalive audio) et les limites connues sont documentés dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
