@@ -1,0 +1,108 @@
+<Window x:Class="ScreenClipTool.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TimeCap"
+        Width="860" Height="660" MinWidth="720" MinHeight="560"
+        Background="#17181D" Foreground="#E9EAEE"
+        FontFamily="Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Theme.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <DockPanel Margin="18">
+
+    <!-- En-tête : marque + actions -->
+    <Grid DockPanel.Dock="Top">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock FontSize="22" FontWeight="Bold"><Run Text="TIME" Foreground="#E9EAEE"/><Run Text="CAP" Foreground="#2F6BE4"/></TextBlock>
+        <TextBlock Text="C L I P   T H E   M O M E N T" FontSize="9" Foreground="#9BA0AC" Margin="1,2,0,0"/>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button Content="Dossier des clips" Click="OpenClipsFolder_Click"/>
+        <Button Content="Réglages…" Margin="8,0,0,0" Click="OpenSettings_Click"/>
+      </StackPanel>
+    </Grid>
+
+    <!-- Statut -->
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,14,0,0">
+      <Ellipse x:Name="StatusDot" Width="12" Height="12" Fill="#5A5E6B" VerticalAlignment="Center"/>
+      <TextBlock x:Name="StatusText" Text="Démarrage…" FontSize="15" FontWeight="SemiBold"
+                 Margin="9,0,0,0" VerticalAlignment="Center"/>
+    </StackPanel>
+
+    <!-- Buffer circulaire -->
+    <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,12,0,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="BUFFER CIRCULAIRE" Style="{StaticResource CardTitle}"/>
+        <TextBlock x:Name="BufferText" Grid.Column="1" Foreground="#9BA0AC" Text="—"/>
+        <ProgressBar x:Name="BufferBar" Grid.Row="1" Grid.ColumnSpan="2" Height="10"
+                     Margin="0,10,0,0" Minimum="0" Maximum="900"/>
+      </Grid>
+    </Border>
+
+    <!-- Sauvegarde de clips -->
+    <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,12,0,0">
+      <StackPanel>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="SAUVEGARDER UN CLIP" Style="{StaticResource CardTitle}"/>
+          <TextBlock x:Name="GranularityHint" Grid.Column="1" Foreground="#9BA0AC"/>
+        </Grid>
+        <WrapPanel x:Name="SaveButtons" Margin="0,10,0,0"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Clips récents -->
+    <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="CLIPS RÉCENTS" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <Button Content="Lire" Click="Play_Click"/>
+            <Button Content="Ouvrir l'emplacement" Margin="8,0,0,0" Click="RevealClip_Click"/>
+          </StackPanel>
+        </Grid>
+        <Grid Margin="0,10,0,0">
+          <ListView x:Name="ClipsList" MouseDoubleClick="ClipsList_MouseDoubleClick">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Nom" Width="380" DisplayMemberBinding="{Binding Name}"/>
+                <GridViewColumn Header="Taille" Width="110" DisplayMemberBinding="{Binding SizeText}"/>
+                <GridViewColumn Header="Date" Width="180" DisplayMemberBinding="{Binding DateText}"/>
+              </GridView>
+            </ListView.View>
+          </ListView>
+          <TextBlock x:Name="ClipsEmptyText" Foreground="#9BA0AC" TextWrapping="Wrap"
+                     TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Margin="24" Visibility="Collapsed"
+                     Text="Aucun clip pour le moment — pressez un raccourci (ou un bouton ci-dessus) pour sauvegarder les dernières secondes."/>
+        </Grid>
+      </DockPanel>
+    </Border>
+
+  </DockPanel>
+</Window>

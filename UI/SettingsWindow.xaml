@@ -1,0 +1,115 @@
+<Window x:Class="ScreenClipTool.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:ScreenClipTool.UI"
+        Title="TimeCap — Réglages"
+        Width="720" Height="660" MinWidth="660" MinHeight="580"
+        Background="#17181D" Foreground="#E9EAEE"
+        FontFamily="Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Theme.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Window.Resources>
+  <Grid Margin="14">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <GroupBox Grid.Row="0" Header="Raccourcis clavier (combinaison → durée du clip)" Padding="8">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ListView x:Name="BindingList" Grid.Row="0" SelectionMode="Single"
+                  MouseDoubleClick="BindingList_MouseDoubleClick">
+          <ListView.View>
+            <GridView>
+              <GridViewColumn Header="Combinaison" Width="250" DisplayMemberBinding="{Binding Combo}"/>
+              <GridViewColumn Header="Durée du clip" Width="220" DisplayMemberBinding="{Binding Duration}"/>
+            </GridView>
+          </ListView.View>
+        </ListView>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+          <Button Content="Modifier la sélection" Padding="10,3" Click="EditSelected_Click"/>
+          <Button Content="Supprimer" Padding="10,3" Margin="8,0,0,0" Click="DeleteSelected_Click"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+          <ui:HotkeyBox x:Name="HotkeyInput" Width="190" VerticalContentAlignment="Center"/>
+          <TextBox x:Name="DurationValueBox" Width="56" Margin="8,0,0,0"
+                   VerticalContentAlignment="Center" Text="15"/>
+          <ComboBox x:Name="DurationUnitBox" Width="140" Margin="6,0,0,0"
+                    SelectedIndex="0" SelectionChanged="DurationUnit_Changed">
+            <ComboBoxItem Content="secondes"/>
+            <ComboBoxItem Content="minutes"/>
+            <ComboBoxItem Content="buffer complet"/>
+          </ComboBox>
+          <Button x:Name="AddOrUpdateButton" Content="Ajouter" Padding="12,3" Margin="10,0,0,0"
+                  Click="AddOrUpdate_Click"/>
+          <Button x:Name="CancelEditButton" Content="Annuler" Padding="10,3" Margin="6,0,0,0"
+                  Visibility="Collapsed" Click="CancelEdit_Click"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="3" Margin="0,8,0,0" TextWrapping="Wrap" Opacity="0.65" FontSize="11"
+                   Text="⚠ Une touche sans modificateur (ex. F11) est capturée globalement par le système : tant que l'outil tourne, elle n'est plus transmise à l'application active (jeu inclus). À réserver aux touches peu utilisées (F9–F12) ; à éviter pour des lettres pressées en jeu."/>
+      </Grid>
+    </GroupBox>
+
+    <GroupBox Grid.Row="1" Header="Général" Padding="8" Margin="0,10,0,0">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="130"/>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="FPS :" VerticalAlignment="Center"/>
+        <TextBox x:Name="FpsBox" Grid.Row="0" Grid.Column="1" Margin="8,3"/>
+        <TextBlock Grid.Row="0" Grid.Column="2" Text="Qualité CQ (plus bas = mieux) :"
+                   VerticalAlignment="Center" Margin="16,0,0,0"/>
+        <TextBox x:Name="CqBox" Grid.Row="0" Grid.Column="3" Margin="8,3" Width="130"
+                 HorizontalAlignment="Left"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Fenêtre max du buffer (min) :"
+                   VerticalAlignment="Center"/>
+        <TextBox x:Name="BufferMinutesBox" Grid.Row="1" Grid.Column="1" Margin="8,3"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Dossier des clips :" VerticalAlignment="Center"/>
+        <DockPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Margin="8,4">
+          <Button DockPanel.Dock="Right" Content="Parcourir…" Padding="10,2" Margin="6,0,0,0"
+                  Click="Browse_Click"/>
+          <TextBox x:Name="OutDirBox" VerticalContentAlignment="Center"/>
+        </DockPanel>
+
+        <CheckBox x:Name="AudioCheck" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                  Content="Capturer l'audio du bureau" Margin="0,8,0,0"/>
+        <CheckBox x:Name="MicCheck" Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2"
+                  Content="Micro sur piste séparée" Margin="16,8,0,0"/>
+      </Grid>
+    </GroupBox>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="SaveHint" VerticalAlignment="Center" Margin="0,0,12,0" Opacity="0.6"/>
+      <Button Content="Enregistrer" Padding="16,5" IsDefault="True" Click="Save_Click"/>
+      <Button Content="Fermer" Padding="16,5" Margin="8,0,0,0" IsCancel="True" Click="Close_Click"/>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -1,0 +1,9 @@
+# Sorties de build
+bin/
+obj/
+publish/
+
+# IDE / fichiers locaux
+.vs/
+*.user
+*.suo
