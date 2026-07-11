@@ -27,8 +27,10 @@ public sealed class CaptureEngine : IDisposable
     private bool _disposed;
     private bool _audioDisabledForSession;
 
+    private EncoderChoice? _encoder;
+
     public string? FfmpegPath { get; private set; }
-    public string? VideoEncoder { get; private set; }
+    public string? VideoEncoder => _encoder?.Name;
     public string BufferDir => ResolveBufferDir(_cfg());
 
     public bool IsRunning
@@ -63,20 +65,7 @@ public sealed class CaptureEngine : IDisposable
             _stopRequested = false;
 
             var cfg = _cfg();
-            FfmpegPath ??= FfmpegLocator.Find(cfg.FfmpegPath)
-                ?? throw new InvalidOperationException(
-                    "FFmpeg est introuvable. Téléchargez la version « full » sur gyan.dev " +
-                    "et placez ffmpeg.exe à côté de l'application.");
-
-            var caps = FfmpegCapabilities.Probe(FfmpegPath);
-            if (!caps.HasDdagrab)
-                throw new InvalidOperationException(
-                    "Votre version de FFmpeg ne permet pas la capture d'écran. " +
-                    "Téléchargez un build « full » récent sur gyan.dev.");
-            VideoEncoder = caps.BestNvencEncoder
-                ?? throw new InvalidOperationException(
-                    "Aucune carte graphique NVIDIA compatible n'a été détectée — " +
-                    "elle est nécessaire pour l'enregistrement.");
+            (FfmpegPath, _encoder) = SelectFfmpeg(cfg);
 
             var bufferDir = ResolveBufferDir(cfg);
             Directory.CreateDirectory(bufferDir);
@@ -147,8 +136,38 @@ public sealed class CaptureEngine : IDisposable
             var desc = _audio?.Loopback != null
                 ? (_audio.Mic != null ? "vidéo + son + micro" : "vidéo + son")
                 : "vidéo seule";
+            if (_encoder is { IsSoftware: true }) desc += ", encodage logiciel";
             StatusChanged?.Invoke($"Enregistrement en cours ({desc})");
         }
+    }
+
+    /// <summary>
+    /// Essaie chaque ffmpeg présent (config → dossier de l'app → PATH →
+    /// installation gérée) et retient le premier qui sait à la fois capturer
+    /// l'écran et encoder sur cette machine. Un vieux ffmpeg d'un autre
+    /// logiciel dans le PATH ne bloque donc plus l'application.
+    /// </summary>
+    private static (string Path, EncoderChoice Encoder) SelectFfmpeg(AppConfig cfg)
+    {
+        bool foundAny = false;
+        foreach (var path in FfmpegLocator.FindAll(cfg.FfmpegPath))
+        {
+            foundAny = true;
+            var caps = FfmpegCapabilities.Probe(path);
+            if (caps.IsUsable)
+                return (path, caps.Encoder!);
+            Log.Warn($"ffmpeg inutilisable ({path}) : ddagrab={caps.HasDdagrab}, encodeur={caps.Encoder?.Name ?? "aucun"}");
+        }
+
+        // Rien d'utilisable : si l'installation gérée n'existe pas encore, elle
+        // peut débloquer la situation (build complet et récent) — on la demande.
+        if (FfmpegInstaller.FindInstalled() is null)
+            throw new FfmpegMissingException();
+
+        throw new InvalidOperationException(foundAny
+            ? "Impossible de démarrer l'enregistrement : aucun encodeur vidéo ne fonctionne sur cette machine. " +
+              "Mettez à jour vos pilotes graphiques puis relancez l'application."
+            : "Le moteur vidéo est introuvable. Relancez l'application pour retenter l'installation automatique.");
     }
 
     public void Stop()
@@ -254,11 +273,26 @@ public sealed class CaptureEngine : IDisposable
         if (loop != null) a.Append("-map 1:a ");
         if (mic != null) a.Append($"-map {(loop != null ? 2 : 1)}:a ");
 
+        var enc = _encoder!;
+        // Les encodeurs non-NVENC ne consomment pas les frames D3D11 de ddagrab :
+        // rapatriement en RAM + conversion NV12 (copie CPU, mais universel).
+        if (!enc.DirectD3D11)
+            a.Append("-vf hwdownload,format=bgra,format=nv12 ");
+
         int gop = Math.Max(1, cfg.Fps * cfg.SegmentLengthS);
-        a.Append($"-c:v {VideoEncoder} -rc vbr -cq {cfg.Cq} -b:v 0 -preset p4 -g {gop} ");
+        a.Append($"-c:v {enc.Name} ");
+        // Qualité constante ~équivalente (échelle 0-51) selon la famille d'encodeur.
+        a.Append(enc.Family switch
+        {
+            "nvenc" => $"-rc vbr -cq {cfg.Cq} -b:v 0 -preset p4 ",
+            "amf" => $"-rc cqp -qp_i {cfg.Cq} -qp_p {cfg.Cq} ",
+            "qsv" => $"-global_quality {cfg.Cq} ",
+            _ => $"-crf {cfg.Cq} -preset veryfast ",
+        });
+        a.Append($"-g {gop} ");
         // Keyframe forcée à chaque frontière de segment → coupes exactes du muxer segment.
         a.Append($"-force_key_frames expr:gte(t,n_forced*{cfg.SegmentLengthS}) ");
-        if (VideoEncoder == "hevc_nvenc") a.Append("-tag:v hvc1 ");
+        if (enc.IsHevc) a.Append("-tag:v hvc1 ");
         if (loop != null || mic != null) a.Append("-c:a aac -b:a 160k ");
 
         a.Append($"-f segment -segment_time {cfg.SegmentLengthS} -reset_timestamps 1 ");

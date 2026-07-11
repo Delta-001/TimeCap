@@ -12,7 +12,7 @@ TimeCap is a lightweight Windows application that records your screen **continuo
 ## ✨ Highlights
 
 * **Plug and play** — download one file and run it. Everything else installs itself.
-* **Zero impact on your games** — recording runs 100% on your NVIDIA graphics card.
+* **Zero impact on your games** — recording runs on your graphics card's dedicated encoder (NVIDIA, AMD and Intel supported), with an automatic software fallback.
 * **Instant saving** — clips are assembled in a fraction of a second, with no re-encoding.
 * **Light and portable** — a single executable. No installer, no .NET runtime, nothing to set up.
 
@@ -23,10 +23,12 @@ TimeCap is a lightweight Windows application that records your screen **continuo
 
 That's it. No other steps.
 
+> **Windows SmartScreen**: the first time you run TimeCap, Windows may warn that the app is unrecognized ("Windows protected your PC"). This is expected for new applications that are not code-signed yet — click **More info**, then **Run anyway**. The app is open source: you can audit the code in this repository or build it yourself.
+
 ## 🖥️ Requirements
 
 * **System**: Windows 10 or Windows 11.
-* **Graphics card**: NVIDIA GeForce (RTX 40/50 series recommended for AV1; older cards automatically fall back to HEVC).
+* **Graphics card**: any. TimeCap picks the best encoder available on your machine — NVIDIA (NVENC), AMD (AMF) or Intel (QSV) hardware encoding, with an automatic fallback to software encoding on machines without a supported GPU (works everywhere, uses more CPU).
 * **Internet**: only on first launch, for the automatic video engine download.
 
 ## 🚀 Getting started

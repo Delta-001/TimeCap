@@ -5,6 +5,15 @@ using System.Net.Http;
 namespace ScreenClipTool.Capture;
 
 /// <summary>
+/// Aucun ffmpeg utilisable sur la machine et l'installation gérée n'existe pas
+/// encore : signale à l'app hôte de lancer l'installation automatique.
+/// </summary>
+public sealed class FfmpegMissingException : Exception
+{
+    public FfmpegMissingException() : base("FFmpeg absent ou inutilisable — installation automatique requise.") { }
+}
+
+/// <summary>
 /// Installation automatique du moteur vidéo au premier lancement : télécharge
 /// le build « essentials » de gyan.dev (~30 Mo, inclut ddagrab + NVENC), en
 /// extrait ffmpeg.exe / ffprobe.exe vers %LOCALAPPDATA%\TimeCap\ffmpeg, et

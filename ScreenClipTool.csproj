@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ScreenClipTool</RootNamespace>
     <AssemblyName>TimeCap</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Product>TimeCap</Product>
     <Description>TimeCap — clip the moment. Replay buffer léger (ddagrab + NVENC).</Description>
     <ApplicationIcon>assets\timecap.ico</ApplicationIcon>

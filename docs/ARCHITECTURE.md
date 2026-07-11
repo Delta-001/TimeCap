@@ -4,8 +4,13 @@ Application Windows en zone de notification qui capture l'écran **en continu** 
 buffer circulaire de segments mp4, et permet de sauvegarder un clip **a posteriori**
 d'une durée variable (raccourci clavier → durée), sans réencodage.
 
-- **Vidéo** : ffmpeg `ddagrab` (Desktop Duplication API) → `av1_nvenc` — pipeline
-  100 % GPU (frames D3D11 consommées directement par NVENC), fallback auto `hevc_nvenc`.
+- **Vidéo** : ffmpeg `ddagrab` (Desktop Duplication API) → chaîne d'encodeurs essayés
+  dans l'ordre par un test d'encodage réel : `av1_nvenc` → `hevc_nvenc` → `h264_nvenc`
+  (pipeline 100 % GPU, frames D3D11 directes) → `hevc_amf`/`h264_amf` (AMD) →
+  `av1/hevc/h264_qsv` (Intel) → `libx264` (logiciel, fonctionne partout) — les
+  familles non-NVENC passent par `hwdownload` + conversion NV12. Chaque ffmpeg
+  candidat (config → dossier de l'app → PATH → installation gérée) est validé :
+  un vieux build inutilisable dans le PATH est ignoré au profit du suivant.
 - **Audio** : loopback WASAPI du bureau (NAudio) + micro optionnel sur piste séparée,
   streamés en PCM vers ffmpeg via named pipes, muxés au niveau des segments.
 - **Export** : concat demuxer en `-c copy` → quasi instantané, granularité = 1 segment (2 s).

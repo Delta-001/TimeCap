@@ -163,15 +163,19 @@ public partial class App : Application
     {
         try
         {
-            // Plug-and-play : si ffmpeg est absent (ni à côté de l'exe, ni dans
-            // le PATH, ni déjà installé), on le télécharge au premier lancement.
-            if (Capture.FfmpegLocator.Find(_config.FfmpegPath) is null)
+            try
             {
-                Log.Info("ffmpeg absent — installation automatique.");
+                _capture!.Start();
+            }
+            catch (FfmpegMissingException)
+            {
+                // Plug-and-play : aucun ffmpeg utilisable sur la machine (absent,
+                // ou build inadapté trouvé dans le PATH) → on installe le nôtre.
+                Log.Info("ffmpeg absent ou inutilisable — installation automatique.");
                 await FfmpegInstaller.InstallAsync(new Progress<string>(s =>
                     Dispatcher.BeginInvoke(() => SetStatus(s))));
+                _capture!.Start();
             }
-            _capture!.Start();
         }
         catch (System.Net.Http.HttpRequestException ex)
         {
