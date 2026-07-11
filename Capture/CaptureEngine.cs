@@ -9,13 +9,15 @@ namespace ScreenClipTool.Capture;
 public sealed record SegmentFile(string Path, int Number, DateTime LastWriteUtc);
 
 /// <summary>
-/// Capture continue de l'écran : lance et surveille le process ffmpeg
-/// (ddagrab → NVENC → segments mp4 de N secondes), redémarre en cas de crash,
-/// et borne le disque en supprimant les segments plus vieux que la fenêtre max.
+/// Session de capture continue d'UN écran : lance et surveille le process
+/// ffmpeg (ddagrab → encodeur → segments mp4 de N secondes), redémarre en cas
+/// de crash, et borne le disque en supprimant les segments plus vieux que la
+/// fenêtre max. Plusieurs écrans = plusieurs sessions (voir CaptureManager).
 /// </summary>
 public sealed class CaptureEngine : IDisposable
 {
     private readonly Func<AppConfig> _cfg;
+    private readonly int _screen;
     private readonly object _lock = new();
     private readonly System.Timers.Timer _cleanupTimer;
     private readonly Queue<DateTime> _recentRestarts = new();
@@ -31,7 +33,10 @@ public sealed class CaptureEngine : IDisposable
 
     public string? FfmpegPath { get; private set; }
     public string? VideoEncoder => _encoder?.Name;
-    public string BufferDir => ResolveBufferDir(_cfg());
+    public int ScreenIndex => _screen;
+
+    /// <summary>Dossier des segments de cette session (sous-dossier par écran).</summary>
+    public string BufferDir => Path.Combine(ResolveBufferBase(_cfg()), $"screen{_screen}");
 
     public bool IsRunning
     {
@@ -44,14 +49,16 @@ public sealed class CaptureEngine : IDisposable
     /// <summary>Erreur à notifier (titre, message).</summary>
     public event Action<string, string>? Error;
 
-    public CaptureEngine(Func<AppConfig> config)
+    public CaptureEngine(Func<AppConfig> config, int screenIndex = 0)
     {
         _cfg = config;
+        _screen = screenIndex;
         _cleanupTimer = new System.Timers.Timer(15_000) { AutoReset = true };
         _cleanupTimer.Elapsed += (_, _) => CleanupOldSegments();
     }
 
-    public static string ResolveBufferDir(AppConfig cfg) =>
+    /// <summary>Racine du buffer (chaque session écrit dans son sous-dossier screenN).</summary>
+    public static string ResolveBufferBase(AppConfig cfg) =>
         string.IsNullOrWhiteSpace(cfg.BufferDir)
             ? Path.Combine(Path.GetTempPath(), "ScreenClipTool", "buffer")
             : cfg.BufferDir!;
@@ -67,7 +74,7 @@ public sealed class CaptureEngine : IDisposable
             var cfg = _cfg();
             (FfmpegPath, _encoder) = SelectFfmpeg(cfg);
 
-            var bufferDir = ResolveBufferDir(cfg);
+            var bufferDir = BufferDir;
             Directory.CreateDirectory(bufferDir);
             DeleteTrailingInvalidSegment(bufferDir);
 
@@ -260,9 +267,8 @@ public sealed class CaptureEngine : IDisposable
         var mic = _audio?.Mic;
         var a = new StringBuilder();
         a.Append("-hide_banner -loglevel warning -y ");
-        // Vidéo : Desktop Duplication API, frames D3D11 consommées directement
-        // par NVENC — aucun aller-retour CPU.
-        a.Append($"-f lavfi -i ddagrab=output_idx={cfg.OutputIdx}:framerate={cfg.Fps} ");
+        // Vidéo : Desktop Duplication API de l'écran de cette session.
+        a.Append($"-f lavfi -i ddagrab=output_idx={_screen}:framerate={cfg.Fps} ");
         if (loop != null)
             a.Append($"-f {loop.SampleFmt} -ar {loop.Format.SampleRate} -ac {loop.Format.Channels} " +
                      $"-thread_queue_size 2048 -i \\\\.\\pipe\\{loop.PipeName} ");
@@ -345,7 +351,7 @@ public sealed class CaptureEngine : IDisposable
         try
         {
             var cfg = _cfg();
-            var dir = ResolveBufferDir(cfg);
+            var dir = BufferDir;
             if (!Directory.Exists(dir)) return;
             var cutoff = DateTime.UtcNow - TimeSpan.FromMinutes(Math.Max(1, cfg.MaxBufferMinutes));
             foreach (var seg in GetSegments(dir))

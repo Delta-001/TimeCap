@@ -40,7 +40,33 @@ public partial class SettingsWindow : Window
         OutDirBox.Text = _config.OutputDir;
         AudioCheck.IsChecked = _config.AudioEnabled;
         MicCheck.IsChecked = _config.MicEnabled;
+        PopulateScreens();
     }
+
+    /// <summary>Une case par écran détecté ; l'ordre suit celui des moniteurs Windows (= ddagrab).</summary>
+    private void PopulateScreens()
+    {
+        var selected = _config.EffectiveScreens.ToHashSet();
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        for (int i = 0; i < screens.Length; i++)
+        {
+            var s = screens[i];
+            var check = new System.Windows.Controls.CheckBox
+            {
+                Content = $"Écran {i + 1} — {s.Bounds.Width}×{s.Bounds.Height}{(s.Primary ? " (principal)" : "")}",
+                IsChecked = selected.Contains(i),
+                Margin = new Thickness(0, 0, 16, 4),
+                Tag = i,
+            };
+            ScreensPanel.Children.Add(check);
+        }
+    }
+
+    private List<int> CheckedScreens() => ScreensPanel.Children.OfType<System.Windows.Controls.CheckBox>()
+        .Where(c => c.IsChecked == true)
+        .Select(c => (int)c.Tag)
+        .OrderBy(i => i)
+        .ToList();
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -201,6 +227,13 @@ public partial class SettingsWindow : Window
                 "Aucun raccourci", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
+        var screens = CheckedScreens();
+        if (screens.Count == 0)
+        {
+            MessageBox.Show(this, "Sélectionnez au moins un écran à enregistrer.",
+                "Aucun écran", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
 
         var previous = _configService.Load();
         _config.Fps = fps;
@@ -209,6 +242,7 @@ public partial class SettingsWindow : Window
         _config.OutputDir = outDir;
         _config.AudioEnabled = AudioCheck.IsChecked == true;
         _config.MicEnabled = MicCheck.IsChecked == true;
+        _config.Screens = screens;
         _config.Hotkeys = _rows.Select(r => r.Binding).ToList();
 
         // Les paramètres d'encodage changent le format des segments : le buffer
@@ -216,7 +250,9 @@ public partial class SettingsWindow : Window
         bool restartCapture = previous.Fps != _config.Fps
                               || previous.Cq != _config.Cq
                               || previous.AudioEnabled != _config.AudioEnabled
-                              || previous.MicEnabled != _config.MicEnabled;
+                              || previous.MicEnabled != _config.MicEnabled
+                              || !previous.EffectiveScreens.OrderBy(i => i)
+                                     .SequenceEqual(_config.Screens);
 
         _configService.Save(_config);
         Saved?.Invoke(restartCapture);

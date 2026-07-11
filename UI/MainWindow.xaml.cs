@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -19,7 +20,17 @@ public partial class MainWindow : Window
     {
         public string Name { get; init; } = "";
         public string Meta { get; init; } = "";
+
+        /// <summary>Fichier .mp4, ou dossier de clips multi-écrans.</summary>
         public string FullPath { get; init; } = "";
+
+        /// <summary>Groupe multi-écrans (dossier Clip_… contenant ScreenN.mp4).</summary>
+        public bool IsGroup { get; init; }
+
+        /// <summary>Vidéo utilisée pour la miniature (le fichier lui-même, ou Screen1 du groupe).</summary>
+        public string ThumbSource { get; init; } = "";
+
+        public Visibility StackVisibility => IsGroup ? Visibility.Visible : Visibility.Collapsed;
 
         private ImageSource? _thumbnail;
         public ImageSource? Thumbnail
@@ -35,17 +46,19 @@ public partial class MainWindow : Window
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
-    private readonly CaptureEngine _capture;
+    private readonly CaptureManager _capture;
     private readonly Func<AppConfig> _cfg;
     private readonly Func<HotkeyBinding, Task> _saveClip;
     private readonly Action _openSettings;
     private readonly Action _openClipsFolder;
     private readonly DispatcherTimer _timer;
+    private readonly DispatcherTimer _reloadDebounce;
     private FileSystemWatcher? _clipsWatcher;
     private string? _watchedDir;
     private CancellationTokenSource? _thumbCts;
+    private Point _dragStart;
 
-    public MainWindow(CaptureEngine capture, Func<AppConfig> config,
+    public MainWindow(CaptureManager capture, Func<AppConfig> config,
                       Func<HotkeyBinding, Task> saveClip, Action openSettings, Action openClipsFolder)
     {
         InitializeComponent();
@@ -57,6 +70,8 @@ public partial class MainWindow : Window
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => UpdateBuffer();
+        _reloadDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _reloadDebounce.Tick += (_, _) => { _reloadDebounce.Stop(); LoadClips(); };
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible) { UpdateBuffer(); _timer.Start(); }
@@ -97,7 +112,7 @@ public partial class MainWindow : Window
         StatusDot.Opacity = 1;
         if (active)
         {
-            // Pastille REC rouge qui pulse doucement.
+            // Pastille REC qui pulse doucement.
             StatusDot.Fill = (Brush)FindResource("AccentBrush");
             StatusDot.BeginAnimation(OpacityProperty, new DoubleAnimation(1.0, 0.35, TimeSpan.FromSeconds(0.9))
             {
@@ -155,12 +170,19 @@ public partial class MainWindow : Window
         {
             var cfg = _cfg();
             int segLen = Math.Max(1, cfg.SegmentLengthS);
-            var segments = _capture.GetCompletedSegments();
-            int seconds = segments.Count * segLen;
+            var sessions = _capture.Sessions;
+            int seconds = 0;
             long bytes = 0;
-            foreach (var s in segments)
+            foreach (var session in sessions)
             {
-                try { bytes += new FileInfo(s.Path).Length; } catch { }
+                var segments = session.GetCompletedSegments();
+                // Couverture commune : le plus petit historique parmi les écrans.
+                int s = segments.Count * segLen;
+                seconds = seconds == 0 ? s : Math.Min(seconds, s);
+                foreach (var seg in segments)
+                {
+                    try { bytes += new FileInfo(seg.Path).Length; } catch { }
+                }
             }
             int maxSeconds = Math.Max(1, cfg.MaxBufferMinutes * 60);
             BufferBar.Maximum = maxSeconds;
@@ -181,14 +203,26 @@ public partial class MainWindow : Window
         try
         {
             Directory.CreateDirectory(dir);
-            _clipsWatcher = new FileSystemWatcher(dir, "*.mp4");
-            FileSystemEventHandler handler = (_, _) => Dispatcher.BeginInvoke(LoadClips);
+            // Filtre large : les clips simples sont des .mp4, les clips
+            // multi-écrans des dossiers — rechargement « debouncé ».
+            _clipsWatcher = new FileSystemWatcher(dir)
+            {
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite,
+            };
+            FileSystemEventHandler handler = (_, _) => Dispatcher.BeginInvoke(ScheduleReload);
             _clipsWatcher.Created += handler;
             _clipsWatcher.Deleted += handler;
-            _clipsWatcher.Renamed += (_, _) => Dispatcher.BeginInvoke(LoadClips);
+            _clipsWatcher.Changed += handler;
+            _clipsWatcher.Renamed += (_, _) => Dispatcher.BeginInvoke(ScheduleReload);
             _clipsWatcher.EnableRaisingEvents = true;
         }
         catch (Exception ex) { Log.Warn("Surveillance du dossier clips : " + ex.Message); }
+    }
+
+    private void ScheduleReload()
+    {
+        _reloadDebounce.Stop();
+        _reloadDebounce.Start();
     }
 
     private void LoadClips()
@@ -196,19 +230,40 @@ public partial class MainWindow : Window
         try
         {
             var dir = _cfg().OutputDir;
-            List<ClipRow> items = new();
+            var items = new List<ClipRow>();
             if (Directory.Exists(dir))
             {
-                items = new DirectoryInfo(dir).GetFiles("*.mp4")
-                    .OrderByDescending(f => f.LastWriteTime)
-                    .Take(200)
-                    .Select(f => new ClipRow
+                var root = new DirectoryInfo(dir);
+                var entries = new List<(DateTime Date, ClipRow Row)>();
+
+                foreach (var f in root.GetFiles("*.mp4"))
+                {
+                    entries.Add((f.LastWriteTime, new ClipRow
                     {
                         Name = f.Name,
                         Meta = $"{FormatSize(f.Length)} · {f.LastWriteTime:dd/MM/yyyy HH:mm}",
                         FullPath = f.FullName,
-                    })
-                    .ToList();
+                        ThumbSource = f.FullName,
+                    }));
+                }
+
+                // Clips multi-écrans : sous-dossiers contenant des vidéos.
+                foreach (var d in root.GetDirectories())
+                {
+                    var videos = d.GetFiles("*.mp4").OrderBy(v => v.Name).ToList();
+                    if (videos.Count == 0) continue;
+                    long size = videos.Sum(v => v.Length);
+                    entries.Add((d.LastWriteTime, new ClipRow
+                    {
+                        Name = d.Name,
+                        Meta = $"{videos.Count} écrans · {FormatSize(size)} · {d.LastWriteTime:dd/MM/yyyy HH:mm}",
+                        FullPath = d.FullName,
+                        IsGroup = true,
+                        ThumbSource = videos[0].FullName,
+                    }));
+                }
+
+                items = entries.OrderByDescending(e => e.Date).Take(200).Select(e => e.Row).ToList();
             }
             ClipsList.ItemsSource = items;
             ClipsEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -230,7 +285,7 @@ public partial class MainWindow : Window
             if (ct.IsCancellationRequested) return;
             var image = await Task.Run(() =>
             {
-                var thumb = ClipThumbnails.GetOrCreate(ffmpeg, row.FullPath);
+                var thumb = ClipThumbnails.GetOrCreate(ffmpeg, row.ThumbSource);
                 return thumb is null ? null : LoadBitmap(thumb);
             }, ct).ConfigureAwait(false);
             if (ct.IsCancellationRequested) return;
@@ -258,28 +313,74 @@ public partial class MainWindow : Window
 
     private ClipRow? SelectedClip => ClipsList.SelectedItem as ClipRow;
 
-    private void PlayClip(ClipRow? clip)
+    /// <summary>Clip simple → lecteur intégré ; groupe multi-écrans → son dossier.</summary>
+    private void OpenClip(ClipRow? clip)
     {
-        if (clip is null || !File.Exists(clip.FullPath)) return;
-        try { Process.Start(new ProcessStartInfo(clip.FullPath) { UseShellExecute = true }); }
-        catch (Exception ex) { Log.Warn("Lecture du clip : " + ex.Message); }
+        if (clip is null) return;
+        try
+        {
+            if (clip.IsGroup)
+            {
+                if (Directory.Exists(clip.FullPath))
+                    Process.Start("explorer.exe", $"\"{clip.FullPath}\"");
+            }
+            else if (File.Exists(clip.FullPath))
+            {
+                var player = new PlayerWindow(clip.FullPath) { Owner = this };
+                player.Show();
+            }
+        }
+        catch (Exception ex) { Log.Warn("Ouverture du clip : " + ex.Message); }
     }
 
-    private void Play_Click(object sender, RoutedEventArgs e) => PlayClip(SelectedClip);
+    private void Play_Click(object sender, RoutedEventArgs e) => OpenClip(SelectedClip);
 
-    private void ClipsList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => PlayClip(SelectedClip);
+    private void ClipsList_MouseDoubleClick(object sender, MouseButtonEventArgs e) => OpenClip(SelectedClip);
 
     private void RevealClip_Click(object sender, RoutedEventArgs e)
     {
         var clip = SelectedClip;
         try
         {
-            if (clip != null && File.Exists(clip.FullPath))
+            if (clip != null && (File.Exists(clip.FullPath) || Directory.Exists(clip.FullPath)))
                 Process.Start("explorer.exe", $"/select,\"{clip.FullPath}\"");
             else
                 _openClipsFolder();
         }
         catch (Exception ex) { Log.Warn("Ouverture de l'emplacement : " + ex.Message); }
+    }
+
+    // ---- Partage ----
+
+    /// <summary>Copie le clip (fichier ou dossier) : collable tel quel dans Discord, WhatsApp, un mail…</summary>
+    private void CopyClip_Click(object sender, RoutedEventArgs e)
+    {
+        var clip = SelectedClip;
+        if (clip is null) return;
+        try
+        {
+            Clipboard.SetFileDropList(new StringCollection { clip.FullPath });
+            ShareHint.Text = "Copié ✓ — collez (Ctrl+V) dans Discord, WhatsApp, un mail…";
+        }
+        catch (Exception ex) { Log.Warn("Copie du clip : " + ex.Message); }
+    }
+
+    private void ClipsList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
+        _dragStart = e.GetPosition(null);
+
+    /// <summary>Glisser-déposer un clip vers Discord, l'Explorateur, un mail…</summary>
+    private void ClipsList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || SelectedClip is null) return;
+        var delta = _dragStart - e.GetPosition(null);
+        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        try
+        {
+            var data = new DataObject(DataFormats.FileDrop, new[] { SelectedClip.FullPath });
+            DragDrop.DoDragDrop(ClipsList, data, DragDropEffects.Copy);
+        }
+        catch (Exception ex) { Log.Warn("Glisser-déposer : " + ex.Message); }
     }
 
     private void OpenClipsFolder_Click(object sender, RoutedEventArgs e) => _openClipsFolder();

@@ -39,6 +39,7 @@ public class ConfigService
             {
                 var loaded = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(ConfigPath), JsonOpts) ?? new AppConfig();
                 loaded.Hotkeys = AppConfig.SortByDuration(loaded.Hotkeys);
+                loaded.Screens = loaded.EffectiveScreens.Distinct().OrderBy(i => i).ToList();
                 return loaded;
             }
         }

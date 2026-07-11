@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ScreenClipTool.Config;
 
 public class AppConfig
@@ -22,8 +24,19 @@ public class AppConfig
     /// <summary>Micro capturé sur une piste audio séparée.</summary>
     public bool MicEnabled { get; set; } = false;
 
-    /// <summary>Index du moniteur capturé (ddagrab output_idx).</summary>
+    /// <summary>Ancien réglage mono-écran, conservé pour migration (voir <see cref="Screens"/>).</summary>
     public int OutputIdx { get; set; } = 0;
+
+    /// <summary>
+    /// Index des écrans enregistrés (ddagrab output_idx). Plusieurs écrans =
+    /// une capture parallèle par écran et un clip par écran à la sauvegarde.
+    /// </summary>
+    public List<int>? Screens { get; set; }
+
+    /// <summary>Écrans effectifs : migre depuis output_idx si la liste est absente.</summary>
+    [JsonIgnore]
+    public List<int> EffectiveScreens =>
+        Screens is { Count: > 0 } ? Screens : new List<int> { OutputIdx };
 
     /// <summary>Dossier des segments ; null = %TEMP%\ScreenClipTool\buffer.</summary>
     public string? BufferDir { get; set; }

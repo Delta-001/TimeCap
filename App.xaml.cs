@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using ScreenClipTool.Capture;
 using ScreenClipTool.Config;
@@ -13,7 +13,7 @@ public partial class App : Application
     private Mutex? _singleInstanceMutex;
     private ConfigService? _configService;
     private AppConfig _config = new();
-    private CaptureEngine? _capture;
+    private CaptureManager? _capture;
     private HotkeyManager? _hotkeys;
     private ClipExporter? _exporter;
     private TrayController? _tray;
@@ -63,7 +63,7 @@ public partial class App : Application
         _configService = new ConfigService();
         _config = _configService.Load();
 
-        _capture = new CaptureEngine(() => _config);
+        _capture = new CaptureManager(() => _config);
         _capture.StatusChanged += s => Dispatcher.BeginInvoke(() => SetStatus(s));
         _capture.Error += (title, msg) => Dispatcher.BeginInvoke(() => _tray?.NotifyError(title, msg));
         _exporter = new ClipExporter(_capture, () => _config);
@@ -133,20 +133,43 @@ public partial class App : Application
         {
             _configService = new ConfigService();
             _config = _configService.Load();
-            _capture = new CaptureEngine(() => _config);
+            _capture = new CaptureManager(() => _config);
             var main = new MainWindow(_capture, () => _config, _ => Task.CompletedTask, () => { }, () => { });
             main.SetStatus("Enregistrement en cours (test)");
             main.Show();
             var settings = new SettingsWindow(_configService);
             settings.Show();
+
+            // Lecteur intégré : ouvert sur un mini clip H264 généré à la volée
+            // (décodeur présent sur tout Windows 10/11).
+            PlayerWindow? player = null;
+            try
+            {
+                var ffmpeg = FfmpegLocator.Find(_config.FfmpegPath);
+                if (ffmpeg != null)
+                {
+                    var sample = Path.Combine(Path.GetTempPath(), "ScreenClipTool", "uitest_sample.mp4");
+                    Directory.CreateDirectory(Path.GetDirectoryName(sample)!);
+                    ProcessUtil.Run(ffmpeg,
+                        $"-hide_banner -v error -y -f lavfi -i testsrc2=size=640x360:rate=30:duration=1 -c:v libx264 \"{sample}\"",
+                        30_000);
+                    if (File.Exists(sample))
+                    {
+                        player = new PlayerWindow(sample);
+                        player.Show();
+                    }
+                }
+            }
+            catch (Exception ex) { Log.Warn("uitest lecteur : " + ex.Message); }
+
             var timer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(3),
+                Interval = TimeSpan.FromSeconds(4),
             };
             timer.Tick += (_, _) =>
             {
                 timer.Stop();
-                bool ok = main.IsVisible && settings.IsVisible;
+                bool ok = main.IsVisible && settings.IsVisible && (player is null || player.IsVisible);
                 File.WriteAllText(resultPath, ok ? "ok" : "fenêtres non visibles");
                 Shutdown();
             };

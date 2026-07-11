@@ -79,6 +79,7 @@
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="FPS :" VerticalAlignment="Center"/>
@@ -99,9 +100,14 @@
           <TextBox x:Name="OutDirBox" VerticalContentAlignment="Center"/>
         </DockPanel>
 
-        <CheckBox x:Name="AudioCheck" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Écrans enregistrés :" VerticalAlignment="Center"
+                   Margin="0,8,0,0"/>
+        <WrapPanel x:Name="ScreensPanel" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
+                   Margin="8,10,0,0"/>
+
+        <CheckBox x:Name="AudioCheck" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                   Content="Capturer l'audio du bureau" Margin="0,8,0,0"/>
-        <CheckBox x:Name="MicCheck" Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2"
+        <CheckBox x:Name="MicCheck" Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2"
                   Content="Micro sur piste séparée" Margin="16,8,0,0"/>
       </Grid>
     </GroupBox>

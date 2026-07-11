@@ -14,6 +14,8 @@ TimeCap is a lightweight Windows application that records your screen **continuo
 * **Plug and play** — download one file and run it. Everything else installs itself.
 * **Zero impact on your games** — recording runs on your graphics card's dedicated encoder (NVIDIA, AMD and Intel supported), with an automatic software fallback.
 * **Instant saving** — clips are assembled in a fraction of a second, with no re-encoding.
+* **Multi-monitor** — record the screen you want, or several at once: a multi-screen save creates one folder with one video per display (`Screen1.mp4`, `Screen2.mp4`…).
+* **Built-in player & easy sharing** — double-click a clip to watch it inside the app, and use *Copy* (or drag & drop) to paste a clip straight into Discord, WhatsApp or an email.
 * **Light and portable** — a single executable. No installer, no .NET runtime, nothing to set up.
 
 ## 📥 Download
@@ -35,7 +37,7 @@ That's it. No other steps.
 
 Double-click `TimeCap.exe`:
 
-* A dark window opens with a **REC** indicator (recording is already running) and your recent clips shown as thumbnails.
+* A dark window opens with a **REC** indicator (recording is already running) and your recent clips shown as thumbnails. Double-click a clip to play it in the built-in player; multi-screen clips appear as a stacked card that opens their folder.
 * Closing the window keeps TimeCap running in the notification area (next to the Windows clock). Double-click the tray icon to reopen it.
 
 Save a clip anytime with the default hotkeys:
@@ -53,8 +55,15 @@ Save a clip anytime with the default hotkeys:
 Everything is configurable from the app itself (Settings button), and changes apply immediately — no restart needed:
 
 * Hotkeys and their clip durations (the list is sorted from shortest to longest).
+* Which screens to record — one, or several at the same time.
 * Framerate, quality, maximum history length, output folder.
 * Desktop audio and microphone (recorded on a separate track).
+
+### Sharing a clip
+
+Select a clip and hit **Copy** (or simply drag the card out of the window): the video is placed on the clipboard as a file, ready to paste (`Ctrl+V`) into Discord, WhatsApp, Teams, an email…
+
+> The built-in player uses the codecs installed on Windows. If a clip doesn't play (e.g. AV1 without the free *AV1 Video Extension* from the Microsoft Store), TimeCap automatically opens your default video player instead.
 
 ### Advanced: the `config.json` file
 
@@ -67,7 +76,7 @@ A `config.json` file is created automatically in `%APPDATA%\ScreenClipTool` (or 
 | `fps` | Recording framerate (`60` or `30`). |
 | `audio_enabled` | `true` / `false` — record your PC sound. |
 | `mic_enabled` | `true` / `false` — record your microphone on a separate track. |
-| `output_idx` | Which display to record: `0` for the first screen, `1` for the second, etc. |
+| `screens` | Displays to record, e.g. `[0]` for the first screen or `[0, 1]` for the first two. Multi-screen saves produce a `Clip_<date>` folder with `Screen1.mp4`, `Screen2.mp4`… |
 | `ffmpeg_path` | Optional explicit path to `ffmpeg.exe`. By default TimeCap looks next to the executable, then in `PATH`, then in its own automatic install. |
 
 ## 🛠️ For developers

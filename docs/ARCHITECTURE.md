@@ -14,6 +14,11 @@ d'une durée variable (raccourci clavier → durée), sans réencodage.
 - **Audio** : loopback WASAPI du bureau (NAudio) + micro optionnel sur piste séparée,
   streamés en PCM vers ffmpeg via named pipes, muxés au niveau des segments.
 - **Export** : concat demuxer en `-c copy` → quasi instantané, granularité = 1 segment (2 s).
+- **Multi-écrans** : une session de capture (process ffmpeg + audio) par écran
+  sélectionné, buffers séparés (`buffer/screenN`), export groupé dans un dossier
+  `Clip_<date>` contenant `Screen1.mp4`, `Screen2.mp4`… (une seule → fichier plat).
+- **UI** : lecteur intégré (MediaElement, repli automatique vers le lecteur système
+  si le codec manque), partage par copie presse-papiers (FileDrop) et glisser-déposer.
 
 ## Auto-tests
 

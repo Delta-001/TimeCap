@@ -31,11 +31,13 @@ public static class SelfTest
         double durationSeconds = 0;
 
         var root = Path.Combine(Path.GetTempPath(), "ScreenClipTool", "selftest");
-        CaptureEngine? capture = null;
+        CaptureManager? capture = null;
         try
         {
             if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 
+            // Multi-écrans testé pour de vrai quand la machine a plusieurs moniteurs.
+            int screenCount = System.Windows.Forms.Screen.AllScreens.Length;
             var cfg = new AppConfig
             {
                 BufferDir = Path.Combine(root, "buffer"),
@@ -43,14 +45,16 @@ public static class SelfTest
                 AudioEnabled = true,
                 MicEnabled = false,
                 MaxBufferMinutes = 5,
+                Screens = screenCount > 1 ? new List<int> { 0, 1 } : new List<int> { 0 },
             };
+            L($"Écrans utilisés : {cfg.Screens.Count}/{screenCount}");
 
-            capture = new CaptureEngine(() => cfg);
+            capture = new CaptureManager(() => cfg);
             capture.StatusChanged += s => L("[statut] " + s);
             capture.Error += (t, m) => L($"[erreur] {t} : {m}");
 
             capture.Start();
-            L($"Capture démarrée — encodeur : {capture.VideoEncoder}");
+            L($"Capture démarrée — encodeur : {capture.Sessions.FirstOrDefault()?.VideoEncoder}");
             await Task.Delay(9_000);
 
             var exporter = new ClipExporter(capture, () => cfg);
@@ -60,20 +64,27 @@ public static class SelfTest
             capture.Stop();
             L("Capture arrêtée proprement.");
 
-            if (result.Success && result.Path is not null && File.Exists(result.Path))
+            if (result.Success && result.Path is not null)
             {
                 clipPath = result.Path;
-                sizeBytes = new FileInfo(result.Path).Length;
+                // Multi-écrans : un dossier ScreenN.mp4 ; sinon un fichier unique.
+                var videos = result.IsFolder
+                    ? Directory.GetFiles(result.Path, "*.mp4").OrderBy(f => f).ToList()
+                    : new List<string> { result.Path };
+                sizeBytes = videos.Sum(v => new FileInfo(v).Length);
                 var ffprobe = capture.FfmpegPath is null ? null : FfmpegLocator.FindProbe(capture.FfmpegPath);
-                if (ffprobe != null)
+                if (ffprobe != null && videos.Count > 0)
                 {
-                    durationSeconds = ProcessUtil.ProbeDurationSeconds(ffprobe, result.Path) ?? 0;
+                    durationSeconds = ProcessUtil.ProbeDurationSeconds(ffprobe, videos[0]) ?? 0;
                     var (code, stdout, _) = ProcessUtil.Run(ffprobe,
-                        $"-v error -show_entries stream=codec_type,codec_name -of csv=p=0 \"{result.Path}\"");
+                        $"-v error -show_entries stream=codec_type,codec_name -of csv=p=0 \"{videos[0]}\"");
                     if (code == 0) streams = stdout.Trim().Replace("\r", "");
                 }
-                L($"Clip : {sizeBytes} octets, {durationSeconds:0.##} s, flux : {streams?.Replace("\n", " | ")}");
-                ok = sizeBytes > 50_000 && durationSeconds > 3.5;
+                L($"Vidéos : {videos.Count} ({string.Join(", ", videos.Select(Path.GetFileName))}), " +
+                  $"{sizeBytes} octets, {durationSeconds:0.##} s, flux : {streams?.Replace("\n", " | ")}");
+                ok = videos.Count == cfg.Screens.Count
+                     && videos.All(v => new FileInfo(v).Length > 50_000)
+                     && durationSeconds > 3.5;
             }
             else
             {
