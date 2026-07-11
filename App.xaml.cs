@@ -140,8 +140,8 @@ public partial class App : Application
             var settings = new SettingsWindow(_configService);
             settings.Show();
 
-            // Lecteur intégré : ouvert sur un mini clip H264 généré à la volée
-            // (décodeur présent sur tout Windows 10/11).
+            // Lecteur intégré : validé sur un clip AV1 + audio généré à la volée
+            // (le format de nos captures), repli x264 si la machine n'a pas NVENC.
             PlayerWindow? player = null;
             try
             {
@@ -150,9 +150,15 @@ public partial class App : Application
                 {
                     var sample = Path.Combine(Path.GetTempPath(), "ScreenClipTool", "uitest_sample.mp4");
                     Directory.CreateDirectory(Path.GetDirectoryName(sample)!);
-                    ProcessUtil.Run(ffmpeg,
-                        $"-hide_banner -v error -y -f lavfi -i testsrc2=size=640x360:rate=30:duration=1 -c:v libx264 \"{sample}\"",
-                        30_000);
+                    try { File.Delete(sample); } catch { }
+                    foreach (var codec in new[] { "av1_nvenc", "libx264" })
+                    {
+                        ProcessUtil.Run(ffmpeg,
+                            "-hide_banner -v error -y -f lavfi -i testsrc2=size=640x360:rate=30:duration=2 " +
+                            $"-f lavfi -i sine=frequency=440:duration=2 -c:v {codec} -c:a aac \"{sample}\"",
+                            30_000);
+                        if (File.Exists(sample)) break;
+                    }
                     if (File.Exists(sample))
                     {
                         player = new PlayerWindow(sample);

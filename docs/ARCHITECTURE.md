@@ -17,8 +17,13 @@ d'une durée variable (raccourci clavier → durée), sans réencodage.
 - **Multi-écrans** : une session de capture (process ffmpeg + audio) par écran
   sélectionné, buffers séparés (`buffer/screenN`), export groupé dans un dossier
   `Clip_<date>` contenant `Screen1.mp4`, `Screen2.mp4`… (une seule → fichier plat).
-- **UI** : lecteur intégré (MediaElement, repli automatique vers le lecteur système
-  si le codec manque), partage par copie presse-papiers (FileDrop) et glisser-déposer.
+- **UI** : lecteur intégré à moteur propre — ffmpeg décode en frames BGRA brutes
+  (pipe → WriteableBitmap, mise à l'échelle ≤1280 px) et en PCM (pipe → NAudio),
+  pause par contre-pression des pipes, seek par relance avec `-ss` ; lit tous les
+  clips (AV1 compris) sans dépendre des codecs Windows, contrairement au
+  MediaElement WPF (DirectShow). Les clips multi-écrans se parcourent dans la
+  galerie (navigation interne, pas d'Explorateur). Partage par copie
+  presse-papiers (FileDrop) et glisser-déposer.
 
 ## Auto-tests
 

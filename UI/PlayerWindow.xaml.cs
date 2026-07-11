@@ -3,20 +3,24 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using ScreenClipTool.Capture;
 
 namespace ScreenClipTool.UI;
 
 /// <summary>
-/// Lecteur intégré (MediaElement / codecs Windows). Si le codec du clip n'est
-/// pas disponible sur la machine (ex. AV1 sans l'extension gratuite du Store),
-/// bascule automatiquement vers le lecteur système.
+/// Lecteur intégré : décodage ffmpeg rendu directement dans la fenêtre
+/// (voir <see cref="FfmpegPlayback"/>) — lit tous nos clips, AV1 compris,
+/// sans dépendre des codecs installés sur Windows.
 /// </summary>
 public partial class PlayerWindow : Window
 {
     private readonly string _path;
     private readonly DispatcherTimer _timer;
+    private string? _ffmpeg;
+    private FfmpegPlayback.MediaInfo? _info;
+    private FfmpegPlayback? _playback;
     private bool _seeking;
-    private bool _playing;
+    private bool _ended;
 
     public PlayerWindow(string path)
     {
@@ -24,19 +28,14 @@ public partial class PlayerWindow : Window
         _path = path;
         Title = "TimeCap — " + Path.GetFileName(path);
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _timer.Tick += (_, _) => UpdatePosition();
 
-        Loaded += (_, _) =>
-        {
-            Media.Source = new Uri(path);
-            Media.Volume = 0.8;
-            Play();
-        };
+        Loaded += (_, _) => Open();
         Closed += (_, _) =>
         {
             _timer.Stop();
-            try { Media.Close(); } catch { }
+            _playback?.Dispose();
         };
         KeyDown += (_, e) =>
         {
@@ -51,62 +50,79 @@ public partial class PlayerWindow : Window
         DarkTitleBar.Apply(this);
     }
 
-    private void Play()
+    private void Open()
     {
-        Media.Play();
-        _playing = true;
-        PlayPauseButton.Content = "⏸";
+        _ffmpeg = FfmpegLocator.Find(null);
+        var ffprobe = _ffmpeg is null ? null : FfmpegLocator.FindProbe(_ffmpeg);
+        _info = ffprobe is null ? null : FfmpegPlayback.Probe(ffprobe, _path);
+        if (_ffmpeg is null || _info is null)
+        {
+            // Sans moteur vidéo exploitable, on délègue au lecteur système.
+            Log.Warn($"Lecteur intégré indisponible pour {Path.GetFileName(_path)} — bascule externe.");
+            OpenExternal();
+            Close();
+            return;
+        }
+        PositionSlider.Maximum = Math.Max(0.1, _info.DurationSeconds);
+        StartAt(0, playing: true);
         _timer.Start();
     }
 
-    private void Pause()
+    private void StartAt(double seconds, bool playing)
     {
-        Media.Pause();
-        _playing = false;
+        _playback?.Dispose();
+        _ended = false;
+        _playback = new FfmpegPlayback(_ffmpeg!, _path, _info!, seconds, Dispatcher);
+        _playback.Volume = VolumeSlider.Value;
+        _playback.Ended += () => Dispatcher.BeginInvoke(OnPlaybackEnded);
+        VideoImage.Source = _playback.Bitmap;
+        _playback.Begin(paused: !playing);
+        PlayPauseButton.Content = playing ? "⏸" : "▶";
+    }
+
+    private void OnPlaybackEnded()
+    {
+        _ended = true;
         PlayPauseButton.Content = "▶";
+        PositionSlider.Value = PositionSlider.Maximum;
+        UpdateTimeText(TimeSpan.FromSeconds(_info?.DurationSeconds ?? 0));
     }
 
     private void TogglePlayPause()
     {
-        if (_playing) Pause();
-        else Play();
+        if (_playback is null) return;
+        if (_ended)
+        {
+            StartAt(0, playing: true);
+        }
+        else if (_playback.IsPaused)
+        {
+            _playback.Resume();
+            PlayPauseButton.Content = "⏸";
+        }
+        else
+        {
+            _playback.Pause();
+            PlayPauseButton.Content = "▶";
+        }
     }
 
     private void PlayPause_Click(object sender, RoutedEventArgs e) => TogglePlayPause();
 
-    private void Media_Click(object sender, MouseButtonEventArgs e) => TogglePlayPause();
-
-    private void Media_Opened(object sender, RoutedEventArgs e)
-    {
-        if (Media.NaturalDuration.HasTimeSpan)
-            PositionSlider.Maximum = Media.NaturalDuration.TimeSpan.TotalSeconds;
-        UpdatePosition();
-    }
-
-    private void Media_Ended(object sender, RoutedEventArgs e)
-    {
-        Media.Position = TimeSpan.Zero;
-        Pause();
-        UpdatePosition();
-    }
-
-    private void Media_Failed(object sender, ExceptionRoutedEventArgs e)
-    {
-        // Codec absent (AV1/HEVC selon la machine) : on n'affiche pas d'erreur,
-        // on délègue au lecteur système qui, lui, sait peut-être le lire.
-        Log.Warn($"Lecture intégrée impossible ({Path.GetFileName(_path)}) : {e.ErrorException?.Message}");
-        OpenExternal();
-        Close();
-    }
+    private void Video_Click(object sender, MouseButtonEventArgs e) => TogglePlayPause();
 
     private void UpdatePosition()
     {
-        if (_seeking || !Media.NaturalDuration.HasTimeSpan) return;
-        var position = Media.Position;
-        var total = Media.NaturalDuration.TimeSpan;
-        PositionSlider.Value = Math.Min(position.TotalSeconds, PositionSlider.Maximum);
-        TimeText.Text = $"{Format(position)} / {Format(total)}";
+        if (_playback is null || _seeking || _ended) return;
+        var position = _playback.Position;
+        var max = TimeSpan.FromSeconds(PositionSlider.Maximum);
+        if (position > max) position = max;
+        PositionSlider.Value = position.TotalSeconds;
+        UpdateTimeText(position);
     }
+
+    private void UpdateTimeText(TimeSpan position) =>
+        TimeText.Text = $"{Format(position)} / {Format(TimeSpan.FromSeconds(_info?.DurationSeconds ?? 0))}";
 
     private static string Format(TimeSpan t) =>
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes}:{t.Seconds:00}";
@@ -116,14 +132,16 @@ public partial class PlayerWindow : Window
     private void Slider_SeekEnd(object sender, MouseButtonEventArgs e)
     {
         _seeking = false;
-        Media.Position = TimeSpan.FromSeconds(PositionSlider.Value);
-        UpdatePosition();
+        if (_playback is null) return;
+        bool resume = !_playback.IsPaused && !_ended;
+        StartAt(PositionSlider.Value, playing: resume);
+        UpdateTimeText(TimeSpan.FromSeconds(PositionSlider.Value));
     }
 
-    private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void Volume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_seeking)
-            Media.Position = TimeSpan.FromSeconds(PositionSlider.Value);
+        if (_playback != null)
+            _playback.Volume = e.NewValue;
     }
 
     private void Reveal_Click(object sender, RoutedEventArgs e)

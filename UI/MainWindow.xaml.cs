@@ -58,6 +58,9 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _thumbCts;
     private Point _dragStart;
 
+    /// <summary>Dossier de clips multi-écrans ouvert dans la galerie (null = racine).</summary>
+    private string? _currentFolder;
+
     public MainWindow(CaptureManager capture, Func<AppConfig> config,
                       Func<HotkeyBinding, Task> saveClip, Action openSettings, Action openClipsFolder)
     {
@@ -158,9 +161,28 @@ public partial class MainWindow : Window
 
         GranularityHint.Text = $"précision : {cfg.SegmentLengthS} s";
         SetupClipsWatcher(cfg.OutputDir);
-        LoadClips();
+        NavigateTo(null, animate: false);
         UpdateBuffer();
     }
+
+    // ---- Navigation dans la galerie ----
+
+    /// <summary>Ouvre un dossier de clips multi-écrans dans la galerie (null = racine).</summary>
+    private void NavigateTo(string? folder, bool animate = true)
+    {
+        _currentFolder = folder;
+        BackButton.Visibility = folder is null ? Visibility.Collapsed : Visibility.Visible;
+        ClipsTitle.Text = folder is null
+            ? "CLIPS RÉCENTS"
+            : Path.GetFileName(folder).ToUpperInvariant();
+        LoadClips();
+        if (animate)
+        {
+            ClipsList.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220)));
+        }
+    }
+
+    private void Back_Click(object sender, RoutedEventArgs e) => NavigateTo(null);
 
     // ---- Buffer ----
 
@@ -229,7 +251,14 @@ public partial class MainWindow : Window
     {
         try
         {
-            var dir = _cfg().OutputDir;
+            // Dans un dossier multi-écrans, si celui-ci a disparu → retour racine.
+            if (_currentFolder != null && !Directory.Exists(_currentFolder))
+            {
+                NavigateTo(null, animate: false);
+                return;
+            }
+
+            var dir = _currentFolder ?? _cfg().OutputDir;
             var items = new List<ClipRow>();
             if (Directory.Exists(dir))
             {
@@ -247,23 +276,28 @@ public partial class MainWindow : Window
                     }));
                 }
 
-                // Clips multi-écrans : sous-dossiers contenant des vidéos.
-                foreach (var d in root.GetDirectories())
+                // Clips multi-écrans (racine uniquement) : sous-dossiers avec vidéos.
+                if (_currentFolder is null)
                 {
-                    var videos = d.GetFiles("*.mp4").OrderBy(v => v.Name).ToList();
-                    if (videos.Count == 0) continue;
-                    long size = videos.Sum(v => v.Length);
-                    entries.Add((d.LastWriteTime, new ClipRow
+                    foreach (var d in root.GetDirectories())
                     {
-                        Name = d.Name,
-                        Meta = $"{videos.Count} écrans · {FormatSize(size)} · {d.LastWriteTime:dd/MM/yyyy HH:mm}",
-                        FullPath = d.FullName,
-                        IsGroup = true,
-                        ThumbSource = videos[0].FullName,
-                    }));
+                        var videos = d.GetFiles("*.mp4").OrderBy(v => v.Name).ToList();
+                        if (videos.Count == 0) continue;
+                        long size = videos.Sum(v => v.Length);
+                        entries.Add((d.LastWriteTime, new ClipRow
+                        {
+                            Name = d.Name,
+                            Meta = $"{videos.Count} écrans · {FormatSize(size)} · {d.LastWriteTime:dd/MM/yyyy HH:mm}",
+                            FullPath = d.FullName,
+                            IsGroup = true,
+                            ThumbSource = videos[0].FullName,
+                        }));
+                    }
                 }
 
                 items = entries.OrderByDescending(e => e.Date).Take(200).Select(e => e.Row).ToList();
+                if (_currentFolder != null)
+                    items = items.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
             }
             ClipsList.ItemsSource = items;
             ClipsEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -313,7 +347,7 @@ public partial class MainWindow : Window
 
     private ClipRow? SelectedClip => ClipsList.SelectedItem as ClipRow;
 
-    /// <summary>Clip simple → lecteur intégré ; groupe multi-écrans → son dossier.</summary>
+    /// <summary>Clip simple → lecteur intégré ; groupe multi-écrans → navigation dans l'app.</summary>
     private void OpenClip(ClipRow? clip)
     {
         if (clip is null) return;
@@ -322,7 +356,7 @@ public partial class MainWindow : Window
             if (clip.IsGroup)
             {
                 if (Directory.Exists(clip.FullPath))
-                    Process.Start("explorer.exe", $"\"{clip.FullPath}\"");
+                    NavigateTo(clip.FullPath);
             }
             else if (File.Exists(clip.FullPath))
             {

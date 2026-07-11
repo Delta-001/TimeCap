@@ -37,7 +37,7 @@ That's it. No other steps.
 
 Double-click `TimeCap.exe`:
 
-* A dark window opens with a **REC** indicator (recording is already running) and your recent clips shown as thumbnails. Double-click a clip to play it in the built-in player; multi-screen clips appear as a stacked card that opens their folder.
+* A dark window opens with a **REC** indicator (recording is already running) and your recent clips shown as thumbnails. Double-click a clip to play it in the built-in player; multi-screen clips appear as a stacked card that opens right inside the app (with a back button).
 * Closing the window keeps TimeCap running in the notification area (next to the Windows clock). Double-click the tray icon to reopen it.
 
 Save a clip anytime with the default hotkeys:
@@ -63,7 +63,7 @@ Everything is configurable from the app itself (Settings button), and changes ap
 
 Select a clip and hit **Copy** (or simply drag the card out of the window): the video is placed on the clipboard as a file, ready to paste (`Ctrl+V`) into Discord, WhatsApp, Teams, an email…
 
-> The built-in player uses the codecs installed on Windows. If a clip doesn't play (e.g. AV1 without the free *AV1 Video Extension* from the Microsoft Store), TimeCap automatically opens your default video player instead.
+> The built-in player has its own decoding engine (powered by FFmpeg): it plays every TimeCap clip — AV1 included — without needing any codec installed on Windows.
 
 ### Advanced: the `config.json` file
 

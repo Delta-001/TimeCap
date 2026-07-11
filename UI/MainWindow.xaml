@@ -81,7 +81,10 @@
             <ColumnDefinition Width="Auto"/>
           </Grid.ColumnDefinitions>
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock Text="CLIPS RÉCENTS" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+            <Button x:Name="BackButton" Content="← Retour" Padding="9,3" Margin="0,0,10,0"
+                    Visibility="Collapsed" Click="Back_Click"/>
+            <TextBlock x:Name="ClipsTitle" Text="CLIPS RÉCENTS" Style="{StaticResource CardTitle}"
+                       VerticalAlignment="Center"/>
             <TextBlock x:Name="ShareHint" Margin="14,0,0,0" Foreground="#9BA0AC" FontSize="11"
                        VerticalAlignment="Center"/>
           </StackPanel>
@@ -121,6 +124,25 @@
                         <Rectangle.Fill>
                           <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill"/>
                         </Rectangle.Fill>
+                        <Rectangle.Style>
+                          <Style TargetType="Rectangle">
+                            <Setter Property="Opacity" Value="1"/>
+                            <Style.Triggers>
+                              <!-- Fondu d'apparition quand la miniature est prête -->
+                              <DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}">
+                                <Setter Property="Opacity" Value="0"/>
+                                <DataTrigger.ExitActions>
+                                  <BeginStoryboard>
+                                    <Storyboard>
+                                      <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                       From="0" To="1" Duration="0:0:0.35"/>
+                                    </Storyboard>
+                                  </BeginStoryboard>
+                                </DataTrigger.ExitActions>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Rectangle.Style>
                       </Rectangle>
                     </Grid>
                   </Grid>

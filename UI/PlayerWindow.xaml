@@ -20,17 +20,16 @@
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <Border Grid.Row="0" Background="Black">
-      <MediaElement x:Name="Media" LoadedBehavior="Manual" UnloadedBehavior="Stop"
-                    ScrubbingEnabled="True" Stretch="Uniform"
-                    MediaOpened="Media_Opened" MediaEnded="Media_Ended"
-                    MediaFailed="Media_Failed" MouseLeftButtonUp="Media_Click"/>
+    <Border Grid.Row="0" Background="Black" MouseLeftButtonUp="Video_Click">
+      <Image x:Name="VideoImage" Stretch="Uniform"
+             RenderOptions.BitmapScalingMode="Linear"/>
     </Border>
 
     <Grid Grid.Row="1" Margin="14,10">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="Auto"/>
         <ColumnDefinition Width="Auto"/>
@@ -42,14 +41,17 @@
       <Slider x:Name="PositionSlider" Grid.Column="1" Margin="12,0"
               VerticalAlignment="Center" IsMoveToPointEnabled="True"
               Maximum="1" Foreground="#2F6BE4"
-              PreviewMouseDown="Slider_SeekStart" PreviewMouseUp="Slider_SeekEnd"
-              ValueChanged="Slider_ValueChanged"/>
+              PreviewMouseDown="Slider_SeekStart" PreviewMouseUp="Slider_SeekEnd"/>
 
       <TextBlock x:Name="TimeText" Grid.Column="2" VerticalAlignment="Center"
                  Foreground="#9BA0AC" Margin="0,0,14,0" Text="0:00 / 0:00"/>
 
-      <Button Grid.Column="3" Content="Ouvrir l'emplacement" Margin="0,0,8,0" Click="Reveal_Click"/>
-      <Button Grid.Column="4" Content="Lecteur externe" Click="External_Click"/>
+      <Slider x:Name="VolumeSlider" Grid.Column="3" Width="90" Maximum="1" Value="0.8"
+              VerticalAlignment="Center" Margin="0,0,14,0" IsMoveToPointEnabled="True"
+              ToolTip="Volume" ValueChanged="Volume_Changed"/>
+
+      <Button Grid.Column="4" Content="Ouvrir l'emplacement" Margin="0,0,8,0" Click="Reveal_Click"/>
+      <Button Grid.Column="5" Content="Lecteur externe" Click="External_Click"/>
     </Grid>
   </Grid>
 </Window>
