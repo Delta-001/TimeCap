@@ -18,6 +18,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <Border Grid.Row="0" Background="Black" MouseLeftButtonUp="Video_Click">
@@ -52,6 +53,25 @@
 
       <Button Grid.Column="4" Content="Ouvrir l'emplacement" Margin="0,0,8,0" Click="Reveal_Click"/>
       <Button Grid.Column="5" Content="Lecteur externe" Click="External_Click"/>
+    </Grid>
+
+    <!-- Découpe : marquer début/fin puis exporter l'extrait (copie de flux, instantané) -->
+    <Grid Grid.Row="2" Margin="14,0,14,10">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <Button Grid.Column="0" Content="⟦ Début" Click="MarkStart_Click"
+              ToolTip="Marque le début de l'extrait à la position actuelle"/>
+      <Button Grid.Column="1" Content="Fin ⟧" Margin="8,0,0,0" Click="MarkEnd_Click"
+              ToolTip="Marque la fin de l'extrait à la position actuelle"/>
+      <TextBlock x:Name="TrimText" Grid.Column="2" Margin="14,0" VerticalAlignment="Center"
+                 Foreground="#9BA0AC" TextTrimming="CharacterEllipsis"
+                 Text="Découpe : placez un début et une fin, puis exportez (précision ~2 s)."/>
+      <Button x:Name="ExportTrimButton" Grid.Column="3" Content="Exporter l'extrait"
+              IsEnabled="False" Click="ExportTrim_Click"/>
     </Grid>
   </Grid>
 </Window>

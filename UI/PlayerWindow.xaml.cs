@@ -144,6 +144,75 @@ public partial class PlayerWindow : Window
             _playback.Volume = e.NewValue;
     }
 
+    // ---- Découpe ----
+
+    private double? _markStart;
+    private double? _markEnd;
+    private bool _trimBusy;
+
+    private double CurrentSeconds =>
+        _ended ? PositionSlider.Maximum : _playback?.Position.TotalSeconds ?? 0;
+
+    private void MarkStart_Click(object sender, RoutedEventArgs e)
+    {
+        _markStart = Math.Round(CurrentSeconds, 1);
+        UpdateTrimUi();
+    }
+
+    private void MarkEnd_Click(object sender, RoutedEventArgs e)
+    {
+        _markEnd = Math.Round(CurrentSeconds, 1);
+        UpdateTrimUi();
+    }
+
+    private void UpdateTrimUi()
+    {
+        string F(double? s) => s is null ? "—" : Format(TimeSpan.FromSeconds(s.Value));
+        bool valid = _markStart is { } a && _markEnd is { } b && b > a;
+        ExportTrimButton.IsEnabled = valid && !_trimBusy;
+        TrimText.Text = valid
+            ? $"Extrait : {F(_markStart)} → {F(_markEnd)} ({F(_markEnd - _markStart)})"
+            : $"Début : {F(_markStart)} · Fin : {F(_markEnd)} — précision ~2 s (segments)";
+    }
+
+    private async void ExportTrim_Click(object sender, RoutedEventArgs e)
+    {
+        if (_trimBusy || _ffmpeg is null || _markStart is not { } start || _markEnd is not { } end || end <= start)
+            return;
+        _trimBusy = true;
+        ExportTrimButton.IsEnabled = false;
+        TrimText.Text = "Export de l'extrait…";
+        try
+        {
+            var output = ClipTools.UniquePath(Path.Combine(
+                Path.GetDirectoryName(_path)!,
+                Path.GetFileNameWithoutExtension(_path) + "_extrait.mp4"));
+            var startArg = start.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            var lengthArg = (end - start).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            await Task.Run(() =>
+            {
+                // Copie de flux : instantané, coupe alignée sur la keyframe précédente.
+                var (code, _, stderr) = ProcessUtil.Run(_ffmpeg,
+                    $"-hide_banner -v error -y -ss {startArg} -i \"{_path}\" -t {lengthArg} -c copy \"{output}\"",
+                    120_000);
+                if (code != 0 || !File.Exists(output))
+                    throw new InvalidOperationException("Export impossible : " +
+                        (stderr.Length > 200 ? stderr[^200..] : stderr));
+            });
+            TrimText.Text = $"Extrait exporté ✓ : {Path.GetFileName(output)}";
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Découpe : " + ex.Message);
+            TrimText.Text = "Échec — " + ex.Message;
+        }
+        finally
+        {
+            _trimBusy = false;
+            ExportTrimButton.IsEnabled = true;
+        }
+    }
+
     private void Reveal_Click(object sender, RoutedEventArgs e)
     {
         try { Process.Start("explorer.exe", $"/select,\"{_path}\""); }
