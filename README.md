@@ -63,6 +63,14 @@ Everything is configurable from the app itself (Settings button), and changes ap
 
 Select a clip and hit **Copy** (or simply drag the card out of the window): the video is placed on the clipboard as a file, ready to paste (`Ctrl+V`) into Discord, WhatsApp, Teams, an email…
 
+**Right-click a clip** for the full toolbox:
+
+* **Get a share link (72 h)** — the clip is uploaded to [Litterbox](https://litterbox.catbox.moe) (catbox.moe's temporary host, up to 1 GB, no account) and the link lands in your clipboard. Perfect for clips too big for Discord.
+* **Compress for Discord** — re-encodes under 10 MB and copies the result.
+* **Convert to GIF**, **Copy a frame** (PNG to clipboard).
+* **Trim in the player** — mark start/end while watching, export the extract instantly (~2 s precision).
+* **Pin** (keeps a clip at the top of the gallery), **Rename** (`F2`), **Delete** (`Del`, to the Recycle Bin), **Properties**.
+
 > The built-in player has its own decoding engine (powered by FFmpeg): it plays every TimeCap clip — AV1 included — without needing any codec installed on Windows.
 
 ### Advanced: the `config.json` file
